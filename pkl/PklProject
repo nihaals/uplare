@@ -1,0 +1,20 @@
+amends "pkl:Project"
+
+local github = new {
+  owner = "nihaals"
+  repo = "uplare"
+  pkgPkl = "pkg.pkl-lang.org/github.com/\(owner)/\(repo)"
+  githubUrl = "https://github.com/\(owner)/\(repo)"
+}
+
+package {
+  name = "uplare"
+  baseUri = "package://\(github.pkgPkl)/\(name)"
+  version = "0.1.0"
+  packageZipUrl = "\(github.githubUrl)/releases/download/\(name)@\(version)/\(name)@\(version).zip"
+  description = "Pkl templates for Uplare"
+  sourceCode = github.githubUrl
+  website = sourceCode
+  license = "GPL-3.0"
+  issueTracker = "\(github.githubUrl)/issues"
+}

@@ -1,0 +1,219 @@
+amends "pkl:test"
+
+import "../MacOs.pkl"
+
+local function noConstraintViolation(value: Any): Boolean =
+  module.catchOrNull(() -> value.toString()) == null
+local function constraintViolation(value: Any): Boolean =
+  module.catchOrNull(() -> value.toString())?.startsWith("Type constraint ") ?? false
+
+facts {
+  ["allows valid cask"] {
+    noConstraintViolation(new MacOs.HomebrewCask {
+      caskName = "visual-studio-code"
+      appPaths {
+        "/Applications/Visual Studio Code.app"
+      }
+    })
+    noConstraintViolation(new MacOs.HomebrewCask {
+      caskName = "visual-studio-code"
+      appPaths {
+        "~/Applications/Visual Studio Code.app"
+      }
+    })
+    noConstraintViolation(new MacOs.HomebrewCask {
+      caskName = "visual-studio-code@insiders"
+      appPaths {
+        "/Applications/Visual Studio Code - Insiders.app"
+      }
+    })
+    noConstraintViolation(new MacOs.HomebrewCask {
+      caskName = "a"
+      appPaths {
+        "/Applications/a.app"
+      }
+    })
+  }
+  ["disallows exclamation mark in cask name"] {
+    constraintViolation(new MacOs.HomebrewCask {
+      caskName = "visual-studio-code!"
+      appPaths {
+        "/Applications/Visual Studio Code.app"
+      }
+    })
+    constraintViolation(new MacOs.HomebrewCask {
+      caskName = "!visual-studio-code"
+      appPaths {
+        "/Applications/Visual Studio Code.app"
+      }
+    })
+    constraintViolation(new MacOs.HomebrewCask {
+      caskName = "visual!-studio-code"
+      appPaths {
+        "/Applications/Visual Studio Code.app"
+      }
+    })
+  }
+  ["disallows leading and trailing dash in cask name"] {
+    constraintViolation(new MacOs.HomebrewCask {
+      caskName = "-visual-studio-code"
+      appPaths {
+        "/Applications/Visual Studio Code.app"
+      }
+    })
+    constraintViolation(new MacOs.HomebrewCask {
+      caskName = "visual-studio-code-"
+      appPaths {
+        "/Applications/Visual Studio Code.app"
+      }
+    })
+  }
+  ["disallows leading and trailing @ in cask name"] {
+    constraintViolation(new MacOs.HomebrewCask {
+      caskName = "@visual-studio-code"
+      appPaths {
+        "/Applications/Visual Studio Code.app"
+      }
+    })
+    constraintViolation(new MacOs.HomebrewCask {
+      caskName = "visual-studio-code@"
+      appPaths {
+        "/Applications/Visual Studio Code.app"
+      }
+    })
+  }
+  ["disallows multiple @ in cask name"] {
+    constraintViolation(new MacOs.HomebrewCask {
+      caskName = "visual-studio-code@@insiders"
+      appPaths {
+        "/Applications/Visual Studio Code - Insiders.app"
+      }
+    })
+    constraintViolation(new MacOs.HomebrewCask {
+      caskName = "visual-studio-code@i@nsiders"
+      appPaths {
+        "/Applications/Visual Studio Code - Insiders.app"
+      }
+    })
+  }
+  ["disallows double dash in cask name"] {
+    constraintViolation(new MacOs.HomebrewCask {
+      caskName = "visual-studio--code"
+      appPaths {
+        "/Applications/Visual Studio Code.app"
+      }
+    })
+  }
+  ["disallows trailing slash in app path"] {
+    constraintViolation(new MacOs.HomebrewCask {
+      caskName = "visual-studio-code"
+      appPaths {
+        "/Applications/Visual Studio Code.app/"
+      }
+    })
+  }
+  ["disallows relative app path"] {
+    constraintViolation(new MacOs.HomebrewCask {
+      caskName = "visual-studio-code"
+      appPaths {
+        "Applications/Visual Studio Code.app"
+      }
+    })
+  }
+  ["allows cask with installHomebrew"] {
+    noConstraintViolation(new MacOs.MacOs {
+      installHomebrew = true
+      apps {
+        new MacOs.HomebrewCask {
+          caskName = "visual-studio-code"
+          appPaths {
+            "/Applications/Visual Studio Code.app"
+          }
+        }
+      }
+    })
+    noConstraintViolation(new MacOs.MacOs {
+      installHomebrew = true
+      apps {
+        new MacOs.HomebrewCask {
+          caskName = "visual-studio-code"
+          appPaths {
+            "/Applications/Visual Studio Code.app"
+          }
+        }
+        new MacOs.MacAppStoreApp {
+          appStoreId = 1
+          appPaths {
+            "/Applications/Visual Studio Code.app"
+          }
+        }
+      }
+    })
+  }
+  ["allows non-cask with installHomebrew"] {
+    noConstraintViolation(new MacOs.MacOs {
+      installHomebrew = true
+      apps {
+        new MacOs.MacAppStoreApp {
+          appStoreId = 1
+          appPaths {
+            "/Applications/Visual Studio Code.app"
+          }
+        }
+      }
+    })
+  }
+  ["disallows cask with no installHomebrew"] {
+    constraintViolation(new MacOs.MacOs {
+      installHomebrew = false
+      apps {
+        new MacOs.HomebrewCask {
+          caskName = "visual-studio-code"
+          appPaths {
+            "/Applications/Visual Studio Code.app"
+          }
+        }
+      }
+    })
+    constraintViolation(new MacOs.MacOs {
+      installHomebrew = false
+      apps {
+        new MacOs.MacAppStoreApp {
+          appStoreId = 1
+          appPaths {
+            "/Applications/Visual Studio Code.app"
+          }
+        }
+        new MacOs.HomebrewCask {
+          caskName = "visual-studio-code"
+          appPaths {
+            "/Applications/Visual Studio Code.app"
+          }
+        }
+      }
+    })
+  }
+  ["allows non-cask with no installHomebrew"] {
+    noConstraintViolation(new MacOs.MacOs {
+      installHomebrew = false
+      apps {
+        new MacOs.MacAppStoreApp {
+          appStoreId = 1
+          appPaths {
+            "/Applications/Visual Studio Code.app"
+          }
+        }
+      }
+    })
+  }
+  ["disallows empty apps"] {
+    constraintViolation(new MacOs.MacOs {
+      installHomebrew = true
+      apps {}
+    })
+    constraintViolation(new MacOs.MacOs {
+      installHomebrew = false
+      apps {}
+    })
+  }
+}

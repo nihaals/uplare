@@ -1,0 +1,28 @@
+module uplare.MacOs
+
+mac: MacOs
+class MacOs {
+  installHomebrew: Boolean
+  apps: Listing<MacApp>(isNotEmpty && ifFalseExcludesClass(installHomebrew, HomebrewCask, this))
+}
+
+typealias MacApp = HomebrewCask | MacAppStoreApp
+typealias MacAppPath =
+  String((startsWith("/Applications/") || startsWith("~/Applications/")) && !endsWith("/"))
+
+/// If [bool] is `false` then [listing] must not contain any item with class [`class`].
+local const function ifFalseExcludesClass(bool: Boolean, `class`: Class, listing: Listing<Any>) =
+  if (bool) true else listing.every((item) -> item.getClass() != `class`)
+
+open local class BaseMacApp {
+  fixed type: String = getClass().simpleName
+  appPaths: Listing<MacAppPath>(isNotEmpty && isDistinct)
+}
+
+class HomebrewCask extends BaseMacApp {
+  caskName: String(matches(Regex(#"(?!.*--)(?!.*@.*@)[a-z0-9]([a-z0-9-@]*[a-z0-9])?"#)))
+}
+
+class MacAppStoreApp extends BaseMacApp {
+  appStoreId: UInt
+}
