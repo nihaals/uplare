@@ -7,10 +7,13 @@ local github = new {
   githubUrl = "https://github.com/\(owner)/\(repo)"
 }
 
+local cargoToml = read("../Cargo.toml")
+local cargoTomlVersion = cargoToml.text.splitLimit("\nversion = \"", 2)[1].splitLimit("\"", 2)[0]
+
 package {
   name = "uplare"
   baseUri = "package://\(github.pkgPkl)/\(name)"
-  version = "0.1.0"
+  version = cargoTomlVersion
   packageZipUrl = "\(github.githubUrl)/releases/download/\(name)@\(version)/\(name)@\(version).zip"
   description = "Pkl templates for Uplare"
   sourceCode = github.githubUrl
