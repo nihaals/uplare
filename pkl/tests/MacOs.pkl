@@ -144,7 +144,7 @@ facts {
         new MacOs.MacAppStoreApp {
           appStoreId = 1
           appPaths {
-            "/Applications/Visual Studio Code.app"
+            "/Applications/Visual Studio Code - Insiders.app"
           }
         }
       }
@@ -214,6 +214,92 @@ facts {
     constraintViolation(new MacOs.MacOs {
       installHomebrew = false
       apps {}
+    })
+  }
+  ["disallows duplicate app paths"] {
+    constraintViolation(new MacOs.MacOs {
+      installHomebrew = true
+      apps {
+        new MacOs.HomebrewCask {
+          caskName = "visual-studio-code"
+          appPaths {
+            "/Applications/Visual Studio Code.app"
+            "/Applications/Visual Studio Code.app"
+          }
+        }
+      }
+    })
+    constraintViolation(new MacOs.MacOs {
+      installHomebrew = true
+      apps {
+        new MacOs.HomebrewCask {
+          caskName = "visual-studio-code"
+          appPaths {
+            "/Applications/Visual Studio Code.app"
+          }
+        }
+        new MacOs.HomebrewCask {
+          caskName = "visual-studio-code-2"
+          appPaths {
+            "/Applications/Visual Studio Code.app"
+          }
+        }
+      }
+    })
+    constraintViolation(new MacOs.MacOs {
+      installHomebrew = true
+      apps {
+        new MacOs.HomebrewCask {
+          caskName = "visual-studio-code"
+          appPaths {
+            "/Applications/Visual Studio Code.app"
+          }
+        }
+        new MacOs.MacAppStoreApp {
+          appStoreId = 1
+          appPaths {
+            "/Applications/Visual Studio Code.app"
+          }
+        }
+      }
+    })
+  }
+  ["disallows duplicate cask names"] {
+    constraintViolation(new MacOs.MacOs {
+      installHomebrew = true
+      apps {
+        new MacOs.HomebrewCask {
+          caskName = "visual-studio-code"
+          appPaths {
+            "/Applications/Visual Studio Code.app"
+          }
+        }
+        new MacOs.HomebrewCask {
+          caskName = "visual-studio-code"
+          appPaths {
+            "/Applications/Visual Studio Code - Insiders.app"
+          }
+        }
+      }
+    })
+  }
+  ["disallows duplicate app store ids"] {
+    constraintViolation(new MacOs.MacOs {
+      installHomebrew = true
+      apps {
+        new MacOs.HomebrewCask {
+          caskName = "visual-studio-code"
+          appPaths {
+            "/Applications/Visual Studio Code.app"
+          }
+        }
+        new MacOs.HomebrewCask {
+          caskName = "visual-studio-code"
+          appPaths {
+            "/Applications/Visual Studio Code - Insiders.app"
+          }
+        }
+      }
     })
   }
 }

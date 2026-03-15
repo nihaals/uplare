@@ -3,7 +3,13 @@ module uplare.MacOs
 mac: MacOs
 class MacOs {
   installHomebrew: Boolean
-  apps: Listing<MacApp>(isNotEmpty && ifFalseExcludesClass(installHomebrew, HomebrewCask, this))
+  apps: Listing<MacApp>(
+    isNotEmpty
+      && ifFalseExcludesClass(installHomebrew, HomebrewCask, this)
+      && toList().flatMap((app) -> app.appPaths.toList()).isDistinct
+      && toList().filterIsInstance(HomebrewCask).isDistinctBy((app) -> app.caskName)
+      && toList().filterIsInstance(MacAppStoreApp).isDistinctBy((app) -> app.appStoreId),
+  )
 }
 
 typealias MacApp = HomebrewCask | MacAppStoreApp
