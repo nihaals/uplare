@@ -14,7 +14,7 @@ typealias MacAppPath =
 local const function ifFalseExcludesClass(bool: Boolean, `class`: Class, listing: Listing<Any>) =
   if (bool) true else listing.every((item) -> item.getClass() != `class`)
 
-open local class BaseMacApp {
+abstract local class BaseMacApp {
   fixed type: String = getClass().simpleName
   appPaths: Listing<MacAppPath>(isNotEmpty && isDistinct)
 }
