@@ -35,4 +35,5 @@ class MacAppStoreApp extends BaseMacApp {
 
 output {
   value = mac
+  renderer = new JsonRenderer {}
 }
