@@ -5,6 +5,7 @@ use std::{fs, path::PathBuf};
 
 use anyhow::{Context, Result};
 use clap::{CommandFactory, Parser, Subcommand};
+use validator::Validate;
 
 #[derive(Parser)]
 #[command(version, author, about, long_about = None)]
@@ -48,6 +49,7 @@ fn main() -> Result<()> {
                 let config = fs::read_to_string(system_config)?;
                 let config = serde_json::from_str::<pkl_types::macos::MacOsConfig>(&config)
                     .context("Failed to read system config")?;
+                config.validate().context("Invalid system config")?;
                 let system_has_homebrew = macos::homebrew_is_installed();
             }
         },
