@@ -52,6 +52,7 @@ fn main() -> Result<()> {
                 config.validate().context("Invalid system config")?;
                 let system_has_homebrew = macos::homebrew_is_installed();
                 let system_apps = macos::get_apps()?;
+                let installed_casks = macos::get_installed_casks()?;
             }
         },
         Commands::Completions { shell } => {

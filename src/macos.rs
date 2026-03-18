@@ -2,14 +2,42 @@ use std::{
     collections::HashSet,
     env, fs,
     path::{Path, PathBuf},
+    process::Command,
 };
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 
 pub fn homebrew_is_installed() -> bool {
     which::which("brew").is_ok()
         || Path::new("/opt/homebrew/bin/brew").is_file()
         || Path::new("/usr/local/bin/brew").is_file()
+}
+
+pub fn get_installed_casks() -> Result<HashSet<String>> {
+    let output = Command::new("brew")
+        .args(["list", "--cask"])
+        .output()
+        .context("Failed to run `brew list --cask`")?;
+
+    if !output.status.success() {
+        bail!("`brew list --cask` failed with non-zero exit code");
+    }
+
+    let stdout = String::from_utf8(output.stdout)
+        .context("`brew list --cask` output was not valid UTF-8")?;
+    Ok({
+        stdout
+            .lines()
+            .filter_map(|line| {
+                let trimmed = line.trim();
+                if trimmed.is_empty() {
+                    None
+                } else {
+                    Some(trimmed.to_owned())
+                }
+            })
+            .collect()
+    })
 }
 
 /// Get the list of installed applications as either `/Applications/App.app` or `~/Applications/App.app`. Searches one
