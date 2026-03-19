@@ -1,7 +1,11 @@
 mod macos;
 mod pkl_types;
 
-use std::{collections::HashSet, fs, path::PathBuf};
+use std::{
+    collections::{HashMap, HashSet},
+    fs,
+    path::PathBuf,
+};
 
 use anyhow::{Context, Result};
 use clap::{CommandFactory, Parser, Subcommand};
@@ -70,6 +74,28 @@ fn main() -> Result<()> {
                 } else {
                     HashSet::new()
                 };
+                let installed_app_store_apps: HashMap<u64, String> =
+                    match macos::get_installed_mas_apps() {
+                        Ok(installed_mas_apps) => installed_mas_apps
+                            .into_iter()
+                            .filter_map(|app| match app {
+                                macos::MacAppStoreApp::AppStore { app_id, app_name } => {
+                                    Some((app_id, app_name))
+                                }
+                                macos::MacAppStoreApp::TestFlight { .. } => None,
+                            })
+                            .collect(),
+                        Err(macos::MacAppStoreListError::MasNotFound) => {
+                            eprintln!(
+                                "`mas` is not installed, so installed Mac App Store apps cannot be checked"
+                            );
+                            HashMap::new()
+                        }
+                        Err(error) => {
+                            return Err(error)
+                                .context("Failed to get installed Mac App Store apps");
+                        }
+                    };
 
                 let configured_app_paths: HashSet<&str> = config
                     .apps
@@ -94,9 +120,25 @@ fn main() -> Result<()> {
                     })
                     .collect();
 
+                let configured_app_store_apps: Vec<(u64, &[String])> = config
+                    .apps
+                    .iter()
+                    .filter_map(|app| match app {
+                        MacOsApp::HomebrewCask(_) => None,
+                        MacOsApp::MacAppStoreApp(app_store_app) => Some((
+                            app_store_app.app_store_id,
+                            app_store_app.base.app_paths.as_slice(),
+                        )),
+                    })
+                    .collect();
+
                 let configured_casks: HashSet<&str> = configured_cask_apps
                     .iter()
                     .map(|(cask_name, _)| *cask_name)
+                    .collect();
+                let configured_app_store_ids: HashSet<u64> = configured_app_store_apps
+                    .iter()
+                    .map(|(app_store_id, _)| *app_store_id)
                     .collect();
 
                 let mut sections: Vec<(&str, Vec<String>)> = Vec::new();
@@ -168,6 +210,75 @@ fn main() -> Result<()> {
                         sections.push((
                             "Installed casks missing configured app paths",
                             casks_with_missing_paths,
+                        ));
+                    }
+                }
+
+                {
+                    let mut configured_app_store_not_installed: Vec<String> =
+                        configured_app_store_ids
+                            .iter()
+                            .filter(|app_store_id| {
+                                !installed_app_store_apps.contains_key(app_store_id)
+                            })
+                            .map(|app_store_id| app_store_id.to_string())
+                            .collect();
+                    configured_app_store_not_installed.sort();
+                    if !configured_app_store_not_installed.is_empty() {
+                        sections.push((
+                            "Configured App Store apps not installed",
+                            configured_app_store_not_installed,
+                        ));
+                    }
+                }
+
+                {
+                    let mut installed_app_store_not_configured: Vec<String> =
+                        installed_app_store_apps
+                            .iter()
+                            .filter(|(app_store_id, _)| {
+                                !configured_app_store_ids.contains(app_store_id)
+                            })
+                            .map(|(app_store_id, app_name)| {
+                                format!("{} ({})", app_name, app_store_id)
+                            })
+                            .collect();
+                    installed_app_store_not_configured.sort();
+                    if !installed_app_store_not_configured.is_empty() {
+                        sections.push((
+                            "Installed App Store apps not in config",
+                            installed_app_store_not_configured,
+                        ));
+                    }
+                }
+
+                {
+                    let mut app_store_apps_with_missing_paths = Vec::new();
+                    for (app_store_id, app_paths) in configured_app_store_apps {
+                        if !installed_app_store_apps.contains_key(&app_store_id) {
+                            continue;
+                        }
+
+                        let mut missing_paths: Vec<&str> = app_paths
+                            .iter()
+                            .filter(|app_path| !system_apps.contains(*app_path))
+                            .map(String::as_str)
+                            .collect();
+                        sort_paths_by_app_name(&mut missing_paths);
+
+                        if !missing_paths.is_empty() {
+                            app_store_apps_with_missing_paths.push(format!(
+                                "{} -> missing {}",
+                                app_store_id,
+                                missing_paths.join(", ")
+                            ));
+                        }
+                    }
+                    app_store_apps_with_missing_paths.sort();
+                    if !app_store_apps_with_missing_paths.is_empty() {
+                        sections.push((
+                            "Installed App Store apps missing configured app paths",
+                            app_store_apps_with_missing_paths,
                         ));
                     }
                 }
