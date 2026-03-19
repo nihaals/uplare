@@ -120,17 +120,6 @@ fn main() -> Result<()> {
                     .map(String::as_str)
                     .collect();
 
-                let configured_cask_apps: Vec<(&str, &[String])> = config
-                    .apps
-                    .iter()
-                    .filter_map(|app| match app {
-                        MacOsApp::HomebrewCask(cask) => {
-                            Some((cask.cask_name.as_str(), cask.base.app_paths.as_slice()))
-                        }
-                        _ => None,
-                    })
-                    .collect();
-
                 let configured_manual_apps: Vec<(&str, &[String])> = config
                     .apps
                     .iter()
@@ -139,6 +128,17 @@ fn main() -> Result<()> {
                             manual_app.name.as_str(),
                             manual_app.base.app_paths.as_slice(),
                         )),
+                        _ => None,
+                    })
+                    .collect();
+
+                let configured_cask_apps: Vec<(&str, &[String])> = config
+                    .apps
+                    .iter()
+                    .filter_map(|app| match app {
+                        MacOsApp::HomebrewCask(cask) => {
+                            Some((cask.cask_name.as_str(), cask.base.app_paths.as_slice()))
+                        }
                         _ => None,
                     })
                     .collect();
@@ -190,6 +190,33 @@ fn main() -> Result<()> {
                             config.install_homebrew, system_has_homebrew
                         )],
                     ));
+                }
+
+                {
+                    let mut manual_apps_with_missing_paths = Vec::new();
+                    for (app_name, app_paths) in configured_manual_apps {
+                        let mut missing_paths: Vec<&str> = app_paths
+                            .iter()
+                            .filter(|app_path| !system_apps.contains(*app_path))
+                            .map(String::as_str)
+                            .collect();
+                        sort_paths_by_app_name(&mut missing_paths);
+
+                        if !missing_paths.is_empty() {
+                            manual_apps_with_missing_paths.push(format!(
+                                "{} -> missing {}",
+                                app_name,
+                                missing_paths.join(", ")
+                            ));
+                        }
+                    }
+                    manual_apps_with_missing_paths.sort();
+                    if !manual_apps_with_missing_paths.is_empty() {
+                        sections.push((
+                            "Configured manual apps missing configured app paths",
+                            manual_apps_with_missing_paths,
+                        ));
+                    }
                 }
 
                 {
@@ -381,33 +408,6 @@ fn main() -> Result<()> {
                         sections.push((
                             "Installed TestFlight apps missing configured app paths",
                             testflight_apps_with_missing_paths,
-                        ));
-                    }
-                }
-
-                {
-                    let mut manual_apps_with_missing_paths = Vec::new();
-                    for (app_name, app_paths) in configured_manual_apps {
-                        let mut missing_paths: Vec<&str> = app_paths
-                            .iter()
-                            .filter(|app_path| !system_apps.contains(*app_path))
-                            .map(String::as_str)
-                            .collect();
-                        sort_paths_by_app_name(&mut missing_paths);
-
-                        if !missing_paths.is_empty() {
-                            manual_apps_with_missing_paths.push(format!(
-                                "{} -> missing {}",
-                                app_name,
-                                missing_paths.join(", ")
-                            ));
-                        }
-                    }
-                    manual_apps_with_missing_paths.sort();
-                    if !manual_apps_with_missing_paths.is_empty() {
-                        sections.push((
-                            "Configured manual apps missing configured app paths",
-                            manual_apps_with_missing_paths,
                         ));
                     }
                 }

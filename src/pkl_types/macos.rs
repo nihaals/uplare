@@ -227,6 +227,13 @@ mod tests {
         }
     }
 
+    fn manual(name: &str, paths: &[&str]) -> ManualApp {
+        ManualApp {
+            base: base_app(paths),
+            name: name.to_owned(),
+        }
+    }
+
     fn cask(cask_name: &str, paths: &[&str]) -> HomebrewCaskApp {
         HomebrewCaskApp {
             base: base_app(paths),
@@ -238,13 +245,6 @@ mod tests {
         MacAppStoreApp {
             base: base_app(paths),
             app_store_id,
-        }
-    }
-
-    fn manual(name: &str, paths: &[&str]) -> ManualApp {
-        ManualApp {
-            base: base_app(paths),
-            name: name.to_owned(),
         }
     }
 
