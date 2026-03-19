@@ -183,6 +183,34 @@ facts {
     })
   }
 
+  // -- TestFlightApp --
+
+  ["allows valid testflight app"] {
+    noConstraintViolation(new MacOs.TestFlightApp {
+      name = "My App"
+      appPaths {
+        "/Applications/My App.app"
+      }
+    })
+  }
+  ["disallows testflight app with empty name"] {
+    constraintViolation(new MacOs.TestFlightApp {
+      name = ""
+      appPaths {
+        "/Applications/My App.app"
+      }
+    })
+  }
+  ["disallows testflight app with multiple app paths"] {
+    constraintViolation(new MacOs.TestFlightApp {
+      name = "My App"
+      appPaths {
+        "/Applications/My App.app"
+        "/Applications/My App 2.app"
+      }
+    })
+  }
+
   // -- MacOsConfig --
 
   ["disallows empty apps"] {
@@ -362,6 +390,25 @@ facts {
           appStoreId = 1
           appPaths {
             "/Applications/Visual Studio Code - Insiders.app"
+          }
+        }
+      }
+    })
+  }
+  ["disallows duplicate testflight names"] {
+    constraintViolation(new MacOs.MacOs {
+      installHomebrew = false
+      apps {
+        new MacOs.TestFlightApp {
+          name = "My App"
+          appPaths {
+            "/Applications/My App.app"
+          }
+        }
+        new MacOs.TestFlightApp {
+          name = "My App"
+          appPaths {
+            "/Applications/My App 2.app"
           }
         }
       }

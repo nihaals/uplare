@@ -8,11 +8,12 @@ class MacOs {
       && ifFalseExcludesClass(installHomebrew, HomebrewCask, this)
       && toList().flatMap((app) -> app.appPaths.toList()).isDistinct
       && toList().filterIsInstance(HomebrewCask).isDistinctBy((app) -> app.caskName)
-      && toList().filterIsInstance(MacAppStoreApp).isDistinctBy((app) -> app.appStoreId),
+      && toList().filterIsInstance(MacAppStoreApp).isDistinctBy((app) -> app.appStoreId)
+      && toList().filterIsInstance(TestFlightApp).isDistinctBy((app) -> app.name),
   )
 }
 
-typealias MacApp = ManualApp | HomebrewCask | MacAppStoreApp
+typealias MacApp = ManualApp | HomebrewCask | MacAppStoreApp | TestFlightApp
 typealias MacAppPath =
   String((startsWith("/Applications/") || startsWith("~/Applications/")) && !endsWith("/"))
 
@@ -41,6 +42,11 @@ class HomebrewCask extends BaseMacApp {
 class MacAppStoreApp extends BaseMacApp {
   hidden singleAppPath = true
   appStoreId: UInt(isNonZero)
+}
+
+class TestFlightApp extends BaseMacApp {
+  hidden singleAppPath = true
+  name: String(isNotEmpty)
 }
 
 output {

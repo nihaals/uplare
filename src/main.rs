@@ -74,28 +74,35 @@ fn main() -> Result<()> {
                 } else {
                     HashSet::new()
                 };
-                let installed_app_store_apps: HashMap<u64, String> =
-                    match macos::get_installed_mas_apps() {
-                        Ok(installed_mas_apps) => installed_mas_apps
-                            .into_iter()
-                            .filter_map(|app| match app {
+                let (installed_app_store_apps, installed_testflight_apps): (
+                    HashMap<u64, String>,
+                    HashSet<String>,
+                ) = match macos::get_installed_mas_apps() {
+                    Ok(installed_mas_apps) => {
+                        let mut app_store = HashMap::new();
+                        let mut testflight = HashSet::new();
+                        for app in installed_mas_apps {
+                            match app {
                                 macos::MacAppStoreApp::AppStore { app_id, app_name } => {
-                                    Some((app_id, app_name))
+                                    app_store.insert(app_id, app_name);
                                 }
-                                macos::MacAppStoreApp::TestFlight { .. } => None,
-                            })
-                            .collect(),
-                        Err(macos::MacAppStoreListError::MasNotFound) => {
-                            eprintln!(
-                                "`mas` is not installed, so installed Mac App Store apps cannot be checked"
-                            );
-                            HashMap::new()
+                                macos::MacAppStoreApp::TestFlight { app_name } => {
+                                    testflight.insert(app_name);
+                                }
+                            }
                         }
-                        Err(error) => {
-                            return Err(error)
-                                .context("Failed to get installed Mac App Store apps");
-                        }
-                    };
+                        (app_store, testflight)
+                    }
+                    Err(macos::MacAppStoreListError::MasNotFound) => {
+                        eprintln!(
+                            "`mas` is not installed, so installed Mac App Store apps cannot be checked"
+                        );
+                        (HashMap::new(), HashSet::new())
+                    }
+                    Err(error) => {
+                        return Err(error).context("Failed to get installed Mac App Store apps");
+                    }
+                };
 
                 let configured_app_paths: HashSet<&str> = config
                     .apps
@@ -105,6 +112,9 @@ fn main() -> Result<()> {
                         MacOsApp::HomebrewCask(cask) => cask.base.app_paths.iter(),
                         MacOsApp::MacAppStoreApp(app_store_app) => {
                             app_store_app.base.app_paths.iter()
+                        }
+                        MacOsApp::TestFlightApp(testflight_app) => {
+                            testflight_app.base.app_paths.iter()
                         }
                     })
                     .map(String::as_str)
@@ -119,6 +129,7 @@ fn main() -> Result<()> {
                             Some((cask.cask_name.as_str(), cask.base.app_paths.as_slice()))
                         }
                         MacOsApp::MacAppStoreApp(_) => None,
+                        MacOsApp::TestFlightApp(_) => None,
                     })
                     .collect();
 
@@ -132,6 +143,7 @@ fn main() -> Result<()> {
                         )),
                         MacOsApp::HomebrewCask(_) => None,
                         MacOsApp::MacAppStoreApp(_) => None,
+                        MacOsApp::TestFlightApp(_) => None,
                     })
                     .collect();
 
@@ -145,6 +157,21 @@ fn main() -> Result<()> {
                             app_store_app.app_store_id,
                             app_store_app.base.app_paths.as_slice(),
                         )),
+                        MacOsApp::TestFlightApp(_) => None,
+                    })
+                    .collect();
+
+                let configured_testflight_apps: Vec<(&str, &[String])> = config
+                    .apps
+                    .iter()
+                    .filter_map(|app| match app {
+                        MacOsApp::ManualApp(_) => None,
+                        MacOsApp::HomebrewCask(_) => None,
+                        MacOsApp::MacAppStoreApp(_) => None,
+                        MacOsApp::TestFlightApp(testflight_app) => Some((
+                            testflight_app.name.as_str(),
+                            testflight_app.base.app_paths.as_slice(),
+                        )),
                     })
                     .collect();
 
@@ -155,6 +182,10 @@ fn main() -> Result<()> {
                 let configured_app_store_ids: HashSet<u64> = configured_app_store_apps
                     .iter()
                     .map(|(app_store_id, _)| *app_store_id)
+                    .collect();
+                let configured_testflight_names: HashSet<&str> = configured_testflight_apps
+                    .iter()
+                    .map(|(name, _)| *name)
                     .collect();
 
                 let mut sections: Vec<(&str, Vec<String>)> = Vec::new();
@@ -295,6 +326,69 @@ fn main() -> Result<()> {
                         sections.push((
                             "Installed App Store apps missing configured app paths",
                             app_store_apps_with_missing_paths,
+                        ));
+                    }
+                }
+
+                {
+                    let mut configured_testflight_not_installed: Vec<String> =
+                        configured_testflight_names
+                            .iter()
+                            .filter(|name| !installed_testflight_apps.contains(**name))
+                            .map(|&s| s.to_owned())
+                            .collect();
+                    configured_testflight_not_installed.sort();
+                    if !configured_testflight_not_installed.is_empty() {
+                        sections.push((
+                            "Configured TestFlight apps not installed",
+                            configured_testflight_not_installed,
+                        ));
+                    }
+                }
+
+                {
+                    let mut installed_testflight_not_configured: Vec<String> =
+                        installed_testflight_apps
+                            .iter()
+                            .filter(|name| !configured_testflight_names.contains(name.as_str()))
+                            .cloned()
+                            .collect();
+                    installed_testflight_not_configured.sort();
+                    if !installed_testflight_not_configured.is_empty() {
+                        sections.push((
+                            "Installed TestFlight apps not in config",
+                            installed_testflight_not_configured,
+                        ));
+                    }
+                }
+
+                {
+                    let mut testflight_apps_with_missing_paths = Vec::new();
+                    for (app_name, app_paths) in &configured_testflight_apps {
+                        if !installed_testflight_apps.contains(*app_name) {
+                            continue;
+                        }
+
+                        let mut missing_paths: Vec<&str> = app_paths
+                            .iter()
+                            .filter(|app_path| !system_apps.contains(*app_path))
+                            .map(String::as_str)
+                            .collect();
+                        sort_paths_by_app_name(&mut missing_paths);
+
+                        if !missing_paths.is_empty() {
+                            testflight_apps_with_missing_paths.push(format!(
+                                "{} -> missing {}",
+                                app_name,
+                                missing_paths.join(", ")
+                            ));
+                        }
+                    }
+                    testflight_apps_with_missing_paths.sort();
+                    if !testflight_apps_with_missing_paths.is_empty() {
+                        sections.push((
+                            "Installed TestFlight apps missing configured app paths",
+                            testflight_apps_with_missing_paths,
                         ));
                     }
                 }
