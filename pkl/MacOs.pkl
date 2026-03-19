@@ -40,7 +40,7 @@ class HomebrewCask extends BaseMacApp {
 
 class MacAppStoreApp extends BaseMacApp {
   hidden singleAppPath = true
-  appStoreId: UInt
+  appStoreId: UInt(isNonZero)
 }
 
 output {

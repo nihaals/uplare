@@ -345,4 +345,12 @@ facts {
       }
     })
   }
+  ["disallows app store app with 0 app id"] {
+    constraintViolation(new MacOs.MacAppStoreApp {
+      appStoreId = 0
+      appPaths {
+        "/Applications/Visual Studio Code.app"
+      }
+    })
+  }
 }

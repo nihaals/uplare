@@ -53,6 +53,7 @@ pub struct MacAppStoreApp {
     #[serde(flatten)]
     #[validate(nested)]
     pub base: BaseMacOsApp,
+    #[validate(range(min = 1))]
     pub app_store_id: u64,
 }
 
@@ -475,6 +476,14 @@ mod tests {
                 "/Applications/Visual Studio Code.app",
                 "/Applications/Visual Studio Code - Insiders.app",
             ]
+        )));
+    }
+
+    #[test]
+    fn disallows_app_store_app_with_zero_app_store_id() {
+        assert!(constraint_violation(&app_store(
+            0,
+            &["/Applications/Visual Studio Code.app"]
         )));
     }
 
