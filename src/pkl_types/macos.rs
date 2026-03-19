@@ -223,14 +223,14 @@ mod tests {
 
     fn base_app(paths: &[&str]) -> BaseMacOsApp {
         BaseMacOsApp {
-            app_paths: paths.iter().map(|path| path.to_string()).collect(),
+            app_paths: paths.iter().map(|&path| path.to_owned()).collect(),
         }
     }
 
     fn cask(cask_name: &str, paths: &[&str]) -> HomebrewCaskApp {
         HomebrewCaskApp {
             base: base_app(paths),
-            cask_name: cask_name.to_string(),
+            cask_name: cask_name.to_owned(),
         }
     }
 
@@ -244,14 +244,14 @@ mod tests {
     fn manual(name: &str, paths: &[&str]) -> ManualApp {
         ManualApp {
             base: base_app(paths),
-            name: name.to_string(),
+            name: name.to_owned(),
         }
     }
 
     fn testflight(name: &str, paths: &[&str]) -> TestFlightApp {
         TestFlightApp {
             base: base_app(paths),
-            name: name.to_string(),
+            name: name.to_owned(),
         }
     }
 
