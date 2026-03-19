@@ -12,7 +12,7 @@ class MacOs {
   )
 }
 
-typealias MacApp = HomebrewCask | MacAppStoreApp
+typealias MacApp = ManualApp | HomebrewCask | MacAppStoreApp
 typealias MacAppPath =
   String((startsWith("/Applications/") || startsWith("~/Applications/")) && !endsWith("/"))
 
@@ -28,6 +28,10 @@ abstract local class BaseMacApp {
   fixed type: String = getClass().simpleName
   hidden singleAppPath: Boolean = false
   appPaths: Listing<MacAppPath>(isNotEmpty && isDistinct && isLengthOne(singleAppPath, this))
+}
+
+class ManualApp extends BaseMacApp {
+  name: String(isNotEmpty)
 }
 
 class HomebrewCask extends BaseMacApp {

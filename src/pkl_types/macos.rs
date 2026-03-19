@@ -14,6 +14,7 @@ pub struct MacOsConfig {
 #[derive(Deserialize, Serialize)]
 #[serde(tag = "type")]
 pub enum MacOsApp {
+    ManualApp(ManualApp),
     HomebrewCask(HomebrewCaskApp),
     MacAppStoreApp(MacAppStoreApp),
 }
@@ -23,6 +24,16 @@ pub enum MacOsApp {
 pub struct BaseMacOsApp {
     #[validate(length(min = 1), custom(function = "validate_app_paths"))]
     pub app_paths: Vec<String>,
+}
+
+#[derive(Deserialize, Serialize, Validate)]
+#[serde(rename_all = "camelCase")]
+pub struct ManualApp {
+    #[serde(flatten)]
+    #[validate(nested)]
+    pub base: BaseMacOsApp,
+    #[validate(length(min = 1))]
+    pub name: String,
 }
 
 #[derive(Deserialize, Serialize, Validate)]
@@ -48,6 +59,7 @@ pub struct MacAppStoreApp {
 impl Validate for MacOsApp {
     fn validate(&self) -> Result<(), ValidationErrors> {
         match self {
+            Self::ManualApp(app) => app.validate(),
             Self::HomebrewCask(app) => app.validate(),
             Self::MacAppStoreApp(app) => app.validate(),
         }
@@ -95,6 +107,13 @@ fn validate_macos_config(config: &MacOsConfig) -> Result<(), ValidationError> {
 
     for app in &config.apps {
         match app {
+            MacOsApp::ManualApp(manual_app) => {
+                for app_path in &manual_app.base.app_paths {
+                    if !all_app_paths.insert(app_path) {
+                        return Err(ValidationError::new("duplicate_app_path"));
+                    }
+                }
+            }
             MacOsApp::HomebrewCask(cask) => {
                 if !config.install_homebrew {
                     return Err(ValidationError::new(
@@ -186,6 +205,13 @@ mod tests {
         MacAppStoreApp {
             base: base_app(paths),
             app_store_id,
+        }
+    }
+
+    fn manual(name: &str, paths: &[&str]) -> ManualApp {
+        ManualApp {
+            base: base_app(paths),
+            name: name.to_string(),
         }
     }
 
@@ -452,6 +478,25 @@ mod tests {
                 "/Applications/Visual Studio Code.app",
                 "/Applications/Visual Studio Code - Insiders.app",
             ]
+        )));
+    }
+
+    #[test]
+    fn allows_manual_app_with_multiple_app_paths() {
+        assert!(no_constraint_violation(&manual(
+            "Visual Studio Code",
+            &[
+                "/Applications/Visual Studio Code.app",
+                "/Applications/Visual Studio Code - Insiders.app",
+            ]
+        )));
+    }
+
+    #[test]
+    fn disallows_manual_app_with_empty_name() {
+        assert!(constraint_violation(&manual(
+            "",
+            &["/Applications/Visual Studio Code.app"]
         )));
     }
 }

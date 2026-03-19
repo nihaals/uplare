@@ -320,4 +320,21 @@ facts {
       }
     })
   }
+  ["allows manual app with multiple app paths"] {
+    noConstraintViolation(new MacOs.ManualApp {
+      name = "Visual Studio Code"
+      appPaths {
+        "/Applications/Visual Studio Code.app"
+        "/Applications/Visual Studio Code - Insiders.app"
+      }
+    })
+  }
+  ["disallows manual app with empty name"] {
+    constraintViolation(new MacOs.ManualApp {
+      name = ""
+      appPaths {
+        "/Applications/Visual Studio Code.app"
+      }
+    })
+  }
 }

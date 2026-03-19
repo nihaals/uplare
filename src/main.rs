@@ -101,6 +101,7 @@ fn main() -> Result<()> {
                     .apps
                     .iter()
                     .flat_map(|app| match app {
+                        MacOsApp::ManualApp(manual_app) => manual_app.base.app_paths.iter(),
                         MacOsApp::HomebrewCask(cask) => cask.base.app_paths.iter(),
                         MacOsApp::MacAppStoreApp(app_store_app) => {
                             app_store_app.base.app_paths.iter()
@@ -113,9 +114,23 @@ fn main() -> Result<()> {
                     .apps
                     .iter()
                     .filter_map(|app| match app {
+                        MacOsApp::ManualApp(_) => None,
                         MacOsApp::HomebrewCask(cask) => {
                             Some((cask.cask_name.as_str(), cask.base.app_paths.as_slice()))
                         }
+                        MacOsApp::MacAppStoreApp(_) => None,
+                    })
+                    .collect();
+
+                let configured_manual_apps: Vec<(&str, &[String])> = config
+                    .apps
+                    .iter()
+                    .filter_map(|app| match app {
+                        MacOsApp::ManualApp(manual_app) => Some((
+                            manual_app.name.as_str(),
+                            manual_app.base.app_paths.as_slice(),
+                        )),
+                        MacOsApp::HomebrewCask(_) => None,
                         MacOsApp::MacAppStoreApp(_) => None,
                     })
                     .collect();
@@ -124,6 +139,7 @@ fn main() -> Result<()> {
                     .apps
                     .iter()
                     .filter_map(|app| match app {
+                        MacOsApp::ManualApp(_) => None,
                         MacOsApp::HomebrewCask(_) => None,
                         MacOsApp::MacAppStoreApp(app_store_app) => Some((
                             app_store_app.app_store_id,
@@ -279,6 +295,33 @@ fn main() -> Result<()> {
                         sections.push((
                             "Installed App Store apps missing configured app paths",
                             app_store_apps_with_missing_paths,
+                        ));
+                    }
+                }
+
+                {
+                    let mut manual_apps_with_missing_paths = Vec::new();
+                    for (app_name, app_paths) in configured_manual_apps {
+                        let mut missing_paths: Vec<&str> = app_paths
+                            .iter()
+                            .filter(|app_path| !system_apps.contains(*app_path))
+                            .map(String::as_str)
+                            .collect();
+                        sort_paths_by_app_name(&mut missing_paths);
+
+                        if !missing_paths.is_empty() {
+                            manual_apps_with_missing_paths.push(format!(
+                                "{} -> missing {}",
+                                app_name,
+                                missing_paths.join(", ")
+                            ));
+                        }
+                    }
+                    manual_apps_with_missing_paths.sort();
+                    if !manual_apps_with_missing_paths.is_empty() {
+                        sections.push((
+                            "Configured manual apps missing configured app paths",
+                            manual_apps_with_missing_paths,
                         ));
                     }
                 }
