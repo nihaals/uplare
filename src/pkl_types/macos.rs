@@ -223,6 +223,47 @@ mod tests {
         }
     }
 
+    // -- App path validation (BaseMacOsApp) --
+
+    #[test]
+    fn disallows_trailing_slash_in_app_path() {
+        assert!(constraint_violation(&cask(
+            "visual-studio-code",
+            &["/Applications/Visual Studio Code.app/"]
+        )));
+    }
+
+    #[test]
+    fn disallows_relative_app_path() {
+        assert!(constraint_violation(&cask(
+            "visual-studio-code",
+            &["Applications/Visual Studio Code.app"]
+        )));
+    }
+
+    // -- ManualApp --
+
+    #[test]
+    fn allows_manual_app_with_multiple_app_paths() {
+        assert!(no_constraint_violation(&manual(
+            "Visual Studio Code",
+            &[
+                "/Applications/Visual Studio Code.app",
+                "/Applications/Visual Studio Code - Insiders.app",
+            ]
+        )));
+    }
+
+    #[test]
+    fn disallows_manual_app_with_empty_name() {
+        assert!(constraint_violation(&manual(
+            "",
+            &["/Applications/Visual Studio Code.app"]
+        )));
+    }
+
+    // -- HomebrewCask --
+
     #[test]
     fn allows_valid_cask() {
         assert!(no_constraint_violation(&cask(
@@ -240,6 +281,25 @@ mod tests {
         assert!(no_constraint_violation(&cask(
             "a",
             &["/Applications/a.app"]
+        )));
+    }
+
+    #[test]
+    fn allows_cask_with_multiple_app_paths() {
+        assert!(no_constraint_violation(&cask(
+            "visual-studio-code",
+            &[
+                "/Applications/Visual Studio Code.app",
+                "/Applications/Visual Studio Code - Insiders.app",
+            ]
+        )));
+    }
+
+    #[test]
+    fn disallows_empty_cask_name() {
+        assert!(constraint_violation(&cask(
+            "",
+            &["/Applications/Visual Studio Code.app"]
         )));
     }
 
@@ -303,28 +363,33 @@ mod tests {
         )));
     }
 
+    // -- MacAppStoreApp --
+
     #[test]
-    fn disallows_empty_cask_name() {
-        assert!(constraint_violation(&cask(
-            "",
+    fn disallows_app_store_app_with_zero_app_store_id() {
+        assert!(constraint_violation(&app_store(
+            0,
             &["/Applications/Visual Studio Code.app"]
         )));
     }
 
     #[test]
-    fn disallows_trailing_slash_in_app_path() {
-        assert!(constraint_violation(&cask(
-            "visual-studio-code",
-            &["/Applications/Visual Studio Code.app/"]
+    fn disallows_app_store_app_with_multiple_app_paths() {
+        assert!(constraint_violation(&app_store(
+            1,
+            &[
+                "/Applications/Visual Studio Code.app",
+                "/Applications/Visual Studio Code - Insiders.app",
+            ]
         )));
     }
 
+    // -- MacOsConfig --
+
     #[test]
-    fn disallows_relative_app_path() {
-        assert!(constraint_violation(&cask(
-            "visual-studio-code",
-            &["Applications/Visual Studio Code.app"]
-        )));
+    fn disallows_empty_apps() {
+        assert!(constraint_violation(&macos(true, vec![])));
+        assert!(constraint_violation(&macos(false, vec![])));
     }
 
     #[test]
@@ -395,12 +460,6 @@ mod tests {
     }
 
     #[test]
-    fn disallows_empty_apps() {
-        assert!(constraint_violation(&macos(true, vec![])));
-        assert!(constraint_violation(&macos(false, vec![])));
-    }
-
-    #[test]
     fn disallows_duplicate_app_paths() {
         assert!(constraint_violation(&macos(
             true,
@@ -465,55 +524,6 @@ mod tests {
                     &["/Applications/Visual Studio Code - Insiders.app"]
                 )),
             ]
-        )));
-    }
-
-    #[test]
-    fn disallows_app_store_app_with_multiple_app_paths() {
-        assert!(constraint_violation(&app_store(
-            1,
-            &[
-                "/Applications/Visual Studio Code.app",
-                "/Applications/Visual Studio Code - Insiders.app",
-            ]
-        )));
-    }
-
-    #[test]
-    fn disallows_app_store_app_with_zero_app_store_id() {
-        assert!(constraint_violation(&app_store(
-            0,
-            &["/Applications/Visual Studio Code.app"]
-        )));
-    }
-
-    #[test]
-    fn allows_cask_with_multiple_app_paths() {
-        assert!(no_constraint_violation(&cask(
-            "visual-studio-code",
-            &[
-                "/Applications/Visual Studio Code.app",
-                "/Applications/Visual Studio Code - Insiders.app",
-            ]
-        )));
-    }
-
-    #[test]
-    fn allows_manual_app_with_multiple_app_paths() {
-        assert!(no_constraint_violation(&manual(
-            "Visual Studio Code",
-            &[
-                "/Applications/Visual Studio Code.app",
-                "/Applications/Visual Studio Code - Insiders.app",
-            ]
-        )));
-    }
-
-    #[test]
-    fn disallows_manual_app_with_empty_name() {
-        assert!(constraint_violation(&manual(
-            "",
-            &["/Applications/Visual Studio Code.app"]
         )));
     }
 }

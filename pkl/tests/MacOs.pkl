@@ -8,6 +8,47 @@ local function constraintViolation(value: Any): Boolean =
   module.catchOrNull(() -> value.toString())?.startsWith("Type constraint ") ?? false
 
 facts {
+  // -- App path validation (BaseMacApp) --
+
+  ["disallows trailing slash in app path"] {
+    constraintViolation(new MacOs.HomebrewCask {
+      caskName = "visual-studio-code"
+      appPaths {
+        "/Applications/Visual Studio Code.app/"
+      }
+    })
+  }
+  ["disallows relative app path"] {
+    constraintViolation(new MacOs.HomebrewCask {
+      caskName = "visual-studio-code"
+      appPaths {
+        "Applications/Visual Studio Code.app"
+      }
+    })
+  }
+
+  // -- ManualApp --
+
+  ["allows manual app with multiple app paths"] {
+    noConstraintViolation(new MacOs.ManualApp {
+      name = "Visual Studio Code"
+      appPaths {
+        "/Applications/Visual Studio Code.app"
+        "/Applications/Visual Studio Code - Insiders.app"
+      }
+    })
+  }
+  ["disallows manual app with empty name"] {
+    constraintViolation(new MacOs.ManualApp {
+      name = ""
+      appPaths {
+        "/Applications/Visual Studio Code.app"
+      }
+    })
+  }
+
+  // -- HomebrewCask --
+
   ["allows valid cask"] {
     noConstraintViolation(new MacOs.HomebrewCask {
       caskName = "visual-studio-code"
@@ -31,6 +72,23 @@ facts {
       caskName = "a"
       appPaths {
         "/Applications/a.app"
+      }
+    })
+  }
+  ["allows cask with multiple app paths"] {
+    noConstraintViolation(new MacOs.HomebrewCask {
+      caskName = "visual-studio-code"
+      appPaths {
+        "/Applications/Visual Studio Code.app"
+        "/Applications/Visual Studio Code - Insiders.app"
+      }
+    })
+  }
+  ["disallows empty cask name"] {
+    constraintViolation(new MacOs.HomebrewCask {
+      caskName = ""
+      appPaths {
+        "/Applications/Visual Studio Code.app"
       }
     })
   }
@@ -104,20 +162,37 @@ facts {
       }
     })
   }
-  ["disallows trailing slash in app path"] {
-    constraintViolation(new MacOs.HomebrewCask {
-      caskName = "visual-studio-code"
+
+  // -- MacAppStoreApp --
+
+  ["disallows app store app with 0 app id"] {
+    constraintViolation(new MacOs.MacAppStoreApp {
+      appStoreId = 0
       appPaths {
-        "/Applications/Visual Studio Code.app/"
+        "/Applications/Visual Studio Code.app"
       }
     })
   }
-  ["disallows relative app path"] {
-    constraintViolation(new MacOs.HomebrewCask {
-      caskName = "visual-studio-code"
+  ["disallows app store app with multiple app paths"] {
+    constraintViolation(new MacOs.MacAppStoreApp {
+      appStoreId = 1
       appPaths {
-        "Applications/Visual Studio Code.app"
+        "/Applications/Visual Studio Code.app"
+        "/Applications/Visual Studio Code - Insiders.app"
       }
+    })
+  }
+
+  // -- MacOsConfig --
+
+  ["disallows empty apps"] {
+    constraintViolation(new MacOs.MacOs {
+      installHomebrew = true
+      apps {}
+    })
+    constraintViolation(new MacOs.MacOs {
+      installHomebrew = false
+      apps {}
     })
   }
   ["allows cask with installHomebrew"] {
@@ -206,16 +281,6 @@ facts {
       }
     })
   }
-  ["disallows empty apps"] {
-    constraintViolation(new MacOs.MacOs {
-      installHomebrew = true
-      apps {}
-    })
-    constraintViolation(new MacOs.MacOs {
-      installHomebrew = false
-      apps {}
-    })
-  }
   ["disallows duplicate app paths"] {
     constraintViolation(new MacOs.MacOs {
       installHomebrew = true
@@ -299,57 +364,6 @@ facts {
             "/Applications/Visual Studio Code - Insiders.app"
           }
         }
-      }
-    })
-  }
-  ["disallows app store app with multiple app paths"] {
-    constraintViolation(new MacOs.MacAppStoreApp {
-      appStoreId = 1
-      appPaths {
-        "/Applications/Visual Studio Code.app"
-        "/Applications/Visual Studio Code - Insiders.app"
-      }
-    })
-  }
-  ["allows cask with multiple app paths"] {
-    noConstraintViolation(new MacOs.HomebrewCask {
-      caskName = "visual-studio-code"
-      appPaths {
-        "/Applications/Visual Studio Code.app"
-        "/Applications/Visual Studio Code - Insiders.app"
-      }
-    })
-  }
-  ["allows manual app with multiple app paths"] {
-    noConstraintViolation(new MacOs.ManualApp {
-      name = "Visual Studio Code"
-      appPaths {
-        "/Applications/Visual Studio Code.app"
-        "/Applications/Visual Studio Code - Insiders.app"
-      }
-    })
-  }
-  ["disallows manual app with empty name"] {
-    constraintViolation(new MacOs.ManualApp {
-      name = ""
-      appPaths {
-        "/Applications/Visual Studio Code.app"
-      }
-    })
-  }
-  ["disallows empty cask name"] {
-    constraintViolation(new MacOs.HomebrewCask {
-      caskName = ""
-      appPaths {
-        "/Applications/Visual Studio Code.app"
-      }
-    })
-  }
-  ["disallows app store app with 0 app id"] {
-    constraintViolation(new MacOs.MacAppStoreApp {
-      appStoreId = 0
-      appPaths {
-        "/Applications/Visual Studio Code.app"
       }
     })
   }
