@@ -124,12 +124,10 @@ fn main() -> Result<()> {
                     .apps
                     .iter()
                     .filter_map(|app| match app {
-                        MacOsApp::ManualApp(_) => None,
                         MacOsApp::HomebrewCask(cask) => {
                             Some((cask.cask_name.as_str(), cask.base.app_paths.as_slice()))
                         }
-                        MacOsApp::MacAppStoreApp(_) => None,
-                        MacOsApp::TestFlightApp(_) => None,
+                        _ => None,
                     })
                     .collect();
 
@@ -141,9 +139,7 @@ fn main() -> Result<()> {
                             manual_app.name.as_str(),
                             manual_app.base.app_paths.as_slice(),
                         )),
-                        MacOsApp::HomebrewCask(_) => None,
-                        MacOsApp::MacAppStoreApp(_) => None,
-                        MacOsApp::TestFlightApp(_) => None,
+                        _ => None,
                     })
                     .collect();
 
@@ -151,13 +147,11 @@ fn main() -> Result<()> {
                     .apps
                     .iter()
                     .filter_map(|app| match app {
-                        MacOsApp::ManualApp(_) => None,
-                        MacOsApp::HomebrewCask(_) => None,
                         MacOsApp::MacAppStoreApp(app_store_app) => Some((
                             app_store_app.app_store_id,
                             app_store_app.base.app_paths.as_slice(),
                         )),
-                        MacOsApp::TestFlightApp(_) => None,
+                        _ => None,
                     })
                     .collect();
 
@@ -165,13 +159,11 @@ fn main() -> Result<()> {
                     .apps
                     .iter()
                     .filter_map(|app| match app {
-                        MacOsApp::ManualApp(_) => None,
-                        MacOsApp::HomebrewCask(_) => None,
-                        MacOsApp::MacAppStoreApp(_) => None,
                         MacOsApp::TestFlightApp(testflight_app) => Some((
                             testflight_app.name.as_str(),
                             testflight_app.base.app_paths.as_slice(),
                         )),
+                        _ => None,
                     })
                     .collect();
 
