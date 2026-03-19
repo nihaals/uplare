@@ -414,4 +414,61 @@ facts {
       }
     })
   }
+  ["disallows duplicate manual names"] {
+    constraintViolation(new MacOs.MacOs {
+      installHomebrew = false
+      apps {
+        new MacOs.ManualApp {
+          name = "My App"
+          appPaths {
+            "/Applications/My App.app"
+          }
+        }
+        new MacOs.ManualApp {
+          name = "My App"
+          appPaths {
+            "/Applications/My App 2.app"
+          }
+        }
+      }
+    })
+  }
+  ["disallows duplicate name across manual and testflight apps"] {
+    constraintViolation(new MacOs.MacOs {
+      installHomebrew = false
+      apps {
+        new MacOs.ManualApp {
+          name = "My App"
+          appPaths {
+            "/Applications/My App.app"
+          }
+        }
+        new MacOs.TestFlightApp {
+          name = "My App"
+          appPaths {
+            "/Applications/My App 2.app"
+          }
+        }
+      }
+    })
+  }
+  ["allows manual and testflight apps with different names"] {
+    noConstraintViolation(new MacOs.MacOs {
+      installHomebrew = false
+      apps {
+        new MacOs.ManualApp {
+          name = "My App"
+          appPaths {
+            "/Applications/My App.app"
+          }
+        }
+        new MacOs.TestFlightApp {
+          name = "My Other App"
+          appPaths {
+            "/Applications/My Other App.app"
+          }
+        }
+      }
+    })
+  }
 }

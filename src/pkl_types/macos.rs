@@ -126,11 +126,14 @@ fn validate_macos_config(config: &MacOsConfig) -> Result<(), ValidationError> {
     let mut all_app_paths = HashSet::new();
     let mut cask_names = HashSet::new();
     let mut app_store_ids = HashSet::new();
-    let mut testflight_names = HashSet::new();
+    let mut manual_and_testflight_names = HashSet::new();
 
     for app in &config.apps {
         match app {
             MacOsApp::ManualApp(manual_app) => {
+                if !manual_and_testflight_names.insert(&manual_app.name) {
+                    return Err(ValidationError::new("duplicate_name"));
+                }
                 for app_path in &manual_app.base.app_paths {
                     if !all_app_paths.insert(app_path) {
                         return Err(ValidationError::new("duplicate_app_path"));
@@ -163,8 +166,8 @@ fn validate_macos_config(config: &MacOsConfig) -> Result<(), ValidationError> {
                 }
             }
             MacOsApp::TestFlightApp(testflight_app) => {
-                if !testflight_names.insert(&testflight_app.name) {
-                    return Err(ValidationError::new("duplicate_testflight_name"));
+                if !manual_and_testflight_names.insert(&testflight_app.name) {
+                    return Err(ValidationError::new("duplicate_name"));
                 }
                 for app_path in &testflight_app.base.app_paths {
                     if !all_app_paths.insert(app_path) {
@@ -599,6 +602,42 @@ mod tests {
             vec![
                 MacOsApp::TestFlightApp(testflight("My App", &["/Applications/My App.app"])),
                 MacOsApp::TestFlightApp(testflight("My App", &["/Applications/My App 2.app"])),
+            ]
+        )));
+    }
+
+    #[test]
+    fn disallows_duplicate_manual_names() {
+        assert!(constraint_violation(&macos(
+            false,
+            vec![
+                MacOsApp::ManualApp(manual("My App", &["/Applications/My App.app"])),
+                MacOsApp::ManualApp(manual("My App", &["/Applications/My App 2.app"])),
+            ]
+        )));
+    }
+
+    #[test]
+    fn disallows_duplicate_name_across_manual_and_testflight_apps() {
+        assert!(constraint_violation(&macos(
+            false,
+            vec![
+                MacOsApp::ManualApp(manual("My App", &["/Applications/My App.app"])),
+                MacOsApp::TestFlightApp(testflight("My App", &["/Applications/My App 2.app"])),
+            ]
+        )));
+    }
+
+    #[test]
+    fn allows_manual_and_testflight_apps_with_different_names() {
+        assert!(no_constraint_violation(&macos(
+            false,
+            vec![
+                MacOsApp::ManualApp(manual("My App", &["/Applications/My App.app"])),
+                MacOsApp::TestFlightApp(testflight(
+                    "My Other App",
+                    &["/Applications/My Other App.app"]
+                )),
             ]
         )));
     }

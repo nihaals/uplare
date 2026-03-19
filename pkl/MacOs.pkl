@@ -9,7 +9,9 @@ class MacOs {
       && toList().flatMap((app) -> app.appPaths.toList()).isDistinct
       && toList().filterIsInstance(HomebrewCask).isDistinctBy((app) -> app.caskName)
       && toList().filterIsInstance(MacAppStoreApp).isDistinctBy((app) -> app.appStoreId)
-      && toList().filterIsInstance(TestFlightApp).isDistinctBy((app) -> app.name),
+      && toList()
+        .filter((app) -> app is ManualApp || app is TestFlightApp)
+        .isDistinctBy((app) -> (app as (ManualApp | TestFlightApp)).name),
   )
 }
 
