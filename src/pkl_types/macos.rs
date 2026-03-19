@@ -303,6 +303,14 @@ mod tests {
     }
 
     #[test]
+    fn disallows_empty_cask_name() {
+        assert!(constraint_violation(&cask(
+            "",
+            &["/Applications/Visual Studio Code.app"]
+        )));
+    }
+
+    #[test]
     fn disallows_trailing_slash_in_app_path() {
         assert!(constraint_violation(&cask(
             "visual-studio-code",

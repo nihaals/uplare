@@ -337,4 +337,12 @@ facts {
       }
     })
   }
+  ["disallows empty cask name"] {
+    constraintViolation(new MacOs.HomebrewCask {
+      caskName = ""
+      appPaths {
+        "/Applications/Visual Studio Code.app"
+      }
+    })
+  }
 }
