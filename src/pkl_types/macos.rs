@@ -37,6 +37,7 @@ pub struct HomebrewCaskApp {
 
 #[derive(Deserialize, Serialize, Validate)]
 #[serde(rename_all = "camelCase")]
+#[validate(schema(function = "validate_app_store_app"))]
 pub struct MacAppStoreApp {
     #[serde(flatten)]
     #[validate(nested)]
@@ -77,6 +78,14 @@ fn validate_cask_name(cask_name: &str) -> Result<(), ValidationError> {
     let mut error = ValidationError::new("invalid_cask_name");
     error.add_param(Cow::from("value"), &cask_name.to_string());
     Err(error)
+}
+
+fn validate_app_store_app(app: &MacAppStoreApp) -> Result<(), ValidationError> {
+    if app.base.app_paths.len() == 1 {
+        return Ok(());
+    }
+
+    Err(ValidationError::new("app_store_requires_single_app_path"))
 }
 
 fn validate_macos_config(config: &MacOsConfig) -> Result<(), ValidationError> {
@@ -421,6 +430,34 @@ mod tests {
                     &["/Applications/Visual Studio Code - Insiders.app"]
                 )),
             ]
+        )));
+    }
+
+    #[test]
+    fn disallows_app_store_app_with_multiple_app_paths() {
+        assert!(constraint_violation(&macos(
+            false,
+            vec![MacOsApp::MacAppStoreApp(app_store(
+                1,
+                &[
+                    "/Applications/Visual Studio Code.app",
+                    "/Applications/Visual Studio Code - Insiders.app",
+                ]
+            ))]
+        )));
+    }
+
+    #[test]
+    fn allows_cask_with_multiple_app_paths() {
+        assert!(no_constraint_violation(&macos(
+            true,
+            vec![MacOsApp::HomebrewCask(cask(
+                "visual-studio-code",
+                &[
+                    "/Applications/Visual Studio Code.app",
+                    "/Applications/Visual Studio Code - Insiders.app",
+                ]
+            ))]
         )));
     }
 }

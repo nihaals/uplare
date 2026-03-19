@@ -20,9 +20,14 @@ typealias MacAppPath =
 local const function ifFalseExcludesClass(bool: Boolean, `class`: Class, listing: Listing<Any>) =
   if (bool) true else listing.every((item) -> item.getClass() != `class`)
 
+/// If [bool] is `true` then [listing] must be length 1.
+local const function isLengthOne(bool: Boolean, listing: Listing<Any>) =
+  if (bool) listing.length == 1 else true
+
 abstract local class BaseMacApp {
   fixed type: String = getClass().simpleName
-  appPaths: Listing<MacAppPath>(isNotEmpty && isDistinct)
+  hidden singleAppPath: Boolean = false
+  appPaths: Listing<MacAppPath>(isNotEmpty && isDistinct && isLengthOne(singleAppPath, this))
 }
 
 class HomebrewCask extends BaseMacApp {
@@ -30,6 +35,7 @@ class HomebrewCask extends BaseMacApp {
 }
 
 class MacAppStoreApp extends BaseMacApp {
+  hidden singleAppPath = true
   appStoreId: UInt
 }
 
