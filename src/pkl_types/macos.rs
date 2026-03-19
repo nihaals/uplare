@@ -435,29 +435,23 @@ mod tests {
 
     #[test]
     fn disallows_app_store_app_with_multiple_app_paths() {
-        assert!(constraint_violation(&macos(
-            false,
-            vec![MacOsApp::MacAppStoreApp(app_store(
-                1,
-                &[
-                    "/Applications/Visual Studio Code.app",
-                    "/Applications/Visual Studio Code - Insiders.app",
-                ]
-            ))]
+        assert!(constraint_violation(&app_store(
+            1,
+            &[
+                "/Applications/Visual Studio Code.app",
+                "/Applications/Visual Studio Code - Insiders.app",
+            ]
         )));
     }
 
     #[test]
     fn allows_cask_with_multiple_app_paths() {
-        assert!(no_constraint_violation(&macos(
-            true,
-            vec![MacOsApp::HomebrewCask(cask(
-                "visual-studio-code",
-                &[
-                    "/Applications/Visual Studio Code.app",
-                    "/Applications/Visual Studio Code - Insiders.app",
-                ]
-            ))]
+        assert!(no_constraint_violation(&cask(
+            "visual-studio-code",
+            &[
+                "/Applications/Visual Studio Code.app",
+                "/Applications/Visual Studio Code - Insiders.app",
+            ]
         )));
     }
 }
