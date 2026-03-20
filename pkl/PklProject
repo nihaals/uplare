@@ -21,3 +21,5 @@ package {
   license = "GPL-3.0"
   issueTracker = "\(github.githubUrl)/issues"
 }
+
+tests = import*("tests/**.pkl").keys.toListing()
