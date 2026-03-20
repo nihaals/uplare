@@ -20,6 +20,7 @@ package {
   website = sourceCode
   license = "GPL-3.0"
   issueTracker = "\(github.githubUrl)/issues"
+  apiTests = tests
 }
 
 tests = import*("tests/**.pkl").keys.toListing()
