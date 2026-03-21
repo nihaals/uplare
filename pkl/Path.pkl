@@ -1,1 +1,0 @@
-typealias AbsolutePath = String(startsWith("/") || startsWith("~/"))
