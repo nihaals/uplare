@@ -3,7 +3,7 @@ amends "pkl:Project"
 local github = new {
   owner = "nihaals"
   repo = "uplare"
-  pkgPkl = "pkg.pkl-lang.org/github.com/\(owner)/\(repo)"
+  githubUrlSchemeless = "github.com/\(owner)/\(repo)"
   githubUrl = "https://github.com/\(owner)/\(repo)"
 }
 
@@ -12,9 +12,16 @@ local cargoTomlVersion = cargoToml.text.splitLimit("\nversion = \"", 2)[1].split
 
 package {
   name = "uplare"
-  baseUri = "package://\(github.pkgPkl)/\(name)"
   version = cargoTomlVersion
-  packageZipUrl = "\(github.githubUrl)/releases/download/\(name)@\(version)/\(name)@\(version).zip"
+  // `pkg.pkl-lang.org/github.com/*/*/*` requires release tags to be named the same as the release asset
+  // We use `v<version>` as our tag names and `<name>-pkl@<version>` as our release asset name (derived from last
+  // segment of `baseUri`) so we have to use the whole GitHub release asset download URL
+  local tagName = "v\(version)"
+  local releaseAssetPrefix = "\(name)-pkl"
+  baseUri =
+    "package://\(github.githubUrlSchemeless)/releases/download/\(tagName)/\(releaseAssetPrefix)"
+  packageZipUrl =
+    "\(github.githubUrl)/releases/download/\(tagName)/\(releaseAssetPrefix)@\(version).zip"
   description = "Pkl templates for Uplare"
   sourceCode = github.githubUrl
   website = sourceCode
