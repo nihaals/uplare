@@ -28,6 +28,9 @@ package {
   license = "GPL-3.0"
   issueTracker = "\(github.githubUrl)/issues"
   apiTests = tests
+  exclude {
+    "tests/**"
+  }
 }
 
 tests = import*("tests/**.pkl").keys.toListing()
