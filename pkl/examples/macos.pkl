@@ -1,0 +1,25 @@
+amends "../MacOs.pkl"
+
+mac {
+  installHomebrew = true
+  apps = new {
+    new ManualApp {
+      name = "Wolfram"
+      appPaths = new {
+        "/Applications/Wolfram.app"
+      }
+    }
+    new HomebrewCask {
+      caskName = "visual-studio-code"
+      appPaths = new {
+        "/Applications/Visual Studio Code.app"
+      }
+    }
+    new MacAppStoreApp {
+      appStoreId = 497799835
+      appPaths = new {
+        "/Applications/Xcode.app"
+      }
+    }
+  }
+}

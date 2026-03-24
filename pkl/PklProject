@@ -30,6 +30,7 @@ package {
   apiTests = tests
   exclude {
     "tests/**"
+    "examples/**"
   }
 }
 

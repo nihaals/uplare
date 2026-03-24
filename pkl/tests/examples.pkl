@@ -1,0 +1,11 @@
+amends "pkl:test"
+
+local allExamples = import*("../examples/*.pkl")
+
+examples {
+  for (example in allExamples.keys) {
+    [example.drop("../examples/".length).dropLast(4)] {
+      allExamples[example].output.text
+    }
+  }
+}

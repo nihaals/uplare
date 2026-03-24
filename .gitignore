@@ -1,3 +1,4 @@
 /target/
 /.pkl-lsp/
 /pkl/.out/
+/pkl/tests/examples.pkl-actual.pcf

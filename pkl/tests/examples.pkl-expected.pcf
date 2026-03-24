@@ -1,0 +1,57 @@
+examples {
+  ["macos-custom-properties"] {
+    """
+    {
+      "installHomebrew": true,
+      "apps": [
+        {
+          "type": "ManualApp",
+          "appPaths": [
+            "/Applications/Wolfram.app"
+          ],
+          "name": "Wolfram"
+        },
+        {
+          "type": "HomebrewCask",
+          "appPaths": [
+            "/Applications/Visual Studio Code.app"
+          ],
+          "caskName": "visual-studio-code"
+        }
+      ]
+    }
+    
+    """
+  }
+  ["macos"] {
+    """
+    {
+      "installHomebrew": true,
+      "apps": [
+        {
+          "type": "ManualApp",
+          "appPaths": [
+            "/Applications/Wolfram.app"
+          ],
+          "name": "Wolfram"
+        },
+        {
+          "type": "HomebrewCask",
+          "appPaths": [
+            "/Applications/Visual Studio Code.app"
+          ],
+          "caskName": "visual-studio-code"
+        },
+        {
+          "type": "MacAppStoreApp",
+          "appPaths": [
+            "/Applications/Xcode.app"
+          ],
+          "appStoreId": 497799835
+        }
+      ]
+    }
+    
+    """
+  }
+}

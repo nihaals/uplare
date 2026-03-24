@@ -1,0 +1,46 @@
+amends "../MacOs.pkl"
+
+abstract local class Extended {
+  reason: String(isNotEmpty)
+  correct: MacApp
+}
+
+local class ExtendedManualApp extends Extended {
+  name: String
+  appPaths: Listing<String>
+  correct = new ManualApp {
+    name = outer.name
+    appPaths = outer.appPaths
+  }
+}
+
+local class ExtendedCask extends Extended {
+  caskName: String
+  appPaths: Listing<String>
+  correct = new HomebrewCask {
+    caskName = outer.caskName
+    appPaths = outer.appPaths
+  }
+}
+
+local myApps: Listing<ExtendedManualApp | ExtendedCask> = new {
+  new ExtendedManualApp {
+    name = "Wolfram"
+    appPaths = new {
+      "/Applications/Wolfram.app"
+    }
+    reason = "Experiments"
+  }
+  new ExtendedCask {
+    caskName = "visual-studio-code"
+    appPaths = new {
+      "/Applications/Visual Studio Code.app"
+    }
+    reason = "Programming"
+  }
+}
+
+mac {
+  installHomebrew = true
+  apps = myApps.toList().map((app) -> app.correct).toListing()
+}
