@@ -3,6 +3,12 @@ name = "uplare"
 version = "0.1.0"
 edition = "2024"
 
+description = "A CLI tool for keeping a system config up-to-date"
+repository = "https://github.com/nihaals/uplare"
+license = "GPL-3.0"
+categories = ["command-line-utilities", "config", "filesystem"]
+include = ["/src/", "/LICENSE"]
+
 [dependencies]
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
