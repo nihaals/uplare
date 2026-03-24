@@ -72,6 +72,7 @@ jobs:
           toolchain: stable
           components: rustfmt, clippy
       - uses: actions/checkout@v6
+      - uses: Swatinem/rust-cache@v2
       - name: Run tests
         id: cargo-test
         continue-on-error: true
@@ -110,6 +111,7 @@ jobs:
           toolchain: stable
           targets: ${{ matrix.target }}
       - uses: actions/checkout@v6
+      - uses: Swatinem/rust-cache@v2
       - name: Build CLI
         run: cargo build --release --target ${{ matrix.target }}
       - name: Smoke test
@@ -161,6 +163,7 @@ jobs:
         with:
           toolchain: stable
       - uses: actions/checkout@v6
+      - uses: Swatinem/rust-cache@v2
       - name: Publish crate
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
