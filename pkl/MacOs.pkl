@@ -29,7 +29,7 @@ local const function isLengthOne(bool: Boolean, listing: Listing<Any>) =
 
 abstract local class BaseMacApp {
   fixed type: String = getClass().simpleName
-  hidden singleAppPath: Boolean = false
+  hidden fixed singleAppPath: Boolean = false
   appPaths: Listing<MacAppPath>(isNotEmpty && isDistinct && isLengthOne(singleAppPath, this))
 }
 
@@ -42,12 +42,12 @@ class HomebrewCask extends BaseMacApp {
 }
 
 class MacAppStoreApp extends BaseMacApp {
-  hidden singleAppPath = true
+  fixed singleAppPath = true
   appStoreId: UInt(isNonZero)
 }
 
 class TestFlightApp extends BaseMacApp {
-  hidden singleAppPath = true
+  fixed singleAppPath = true
   name: String(isNotEmpty)
 }
 
