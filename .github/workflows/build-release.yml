@@ -137,8 +137,8 @@ jobs:
         run: |
           mkdir -p release-assets/
           cp pkl-package/* release-assets/
-          cp uplare-x86_64-apple-darwin/uplare release-assets/uplare-x86_64-apple-darwin
-          cp uplare-aarch64-apple-darwin/uplare release-assets/uplare-aarch64-apple-darwin
+          cp uplare-x86_64-apple-darwin/uplare release-assets/uplare-cli-x86_64-apple-darwin
+          cp uplare-aarch64-apple-darwin/uplare release-assets/uplare-cli-aarch64-apple-darwin
       - name: Verify staged release assets
         run: ls -al release-assets/
       - name: Create release
