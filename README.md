@@ -83,7 +83,8 @@ amends "pkl:Project"
 dependencies {
   ["uplare"] {
     // Replace with version from `uplare --version`
-    uri = "package://github.com/nihaals/uplare/releases/download/v0.0.0/uplare-pkl@0.0.0"
+    local version = "0.0.0"
+    uri = "package://github.com/nihaals/uplare/releases/download/v\(version)/uplare-pkl@\(version)"
   }
 }
 ```
