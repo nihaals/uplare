@@ -127,6 +127,9 @@ jobs:
     needs: [pkl, rust-build, rust-test]
     runs-on: ubuntu-latest
     name: Create GitHub release
+    permissions:
+      contents: write
+      actions: read
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v8
