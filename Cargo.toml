@@ -18,3 +18,7 @@ serde_json = "1"
 thiserror = "2"
 validator = { version = "0.20", features = ["derive"] }
 which = "8"
+
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-cli-{ target }{ archive-suffix }"
+pkg-fmt = "bin"
