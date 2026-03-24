@@ -84,12 +84,13 @@ jobs:
         id: cargo-clippy
         continue-on-error: true
         run: cargo clippy -- -D warnings
-      - name: Fail if any Rust check failed
-        run: |
-          if [[ "${{ steps.cargo-test.outcome }}" != "success" || "${{ steps.cargo-fmt.outcome }}" != "success" || "${{ steps.cargo-clippy.outcome }}" != "success" ]]; then
-            echo "At least one Rust check failed"
-            exit 1
-          fi
+      - name: Run publish dry run
+        id: cargo-publish
+        continue-on-error: true
+        run: cargo publish --dry-run
+      - name: Fail if any check failed
+        if: ${{ contains(steps.*.outcome, 'failure') }}
+        run: "false"
 
   rust-build:
     strategy:
