@@ -34,7 +34,7 @@ chmod +x uplare
 
 ## Getting started
 
-1. [Install `pkl`](https://pkl-lang.org/main/current/pkl-cli/index.html#installation)
+1. Install [Pkl](https://github.com/apple/pkl)
 2. Create `mac.pkl`:
 
 ```pkl
