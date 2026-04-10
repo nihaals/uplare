@@ -43,22 +43,22 @@ amends "package://github.com/nihaals/uplare/releases/download/v0.0.0/uplare-pkl@
 
 mac {
   installHomebrew = true
-  apps = new {
+  apps {
     new ManualApp {
       name = "Wolfram"
-      appPaths = new {
+      appPaths {
         "/Applications/Wolfram.app"
       }
     }
     new HomebrewCask {
       caskName = "visual-studio-code"
-      appPaths = new {
+      appPaths {
         "/Applications/Visual Studio Code.app"
       }
     }
     new MacAppStoreApp {
       appStoreId = 497799835
-      appPaths = new {
+      appPaths {
         "/Applications/Xcode.app"
       }
     }
