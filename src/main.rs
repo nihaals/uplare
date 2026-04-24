@@ -1,5 +1,6 @@
 mod macos;
 mod pkl_types;
+mod steamos;
 
 use std::{
     collections::{HashMap, HashSet},
@@ -7,11 +8,14 @@ use std::{
     path::PathBuf,
 };
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use clap::{CommandFactory, Parser, Subcommand};
 use validator::Validate;
 
-use pkl_types::macos::MacOsApp;
+use pkl_types::{
+    macos::MacOsApp,
+    steamos::{DeckyStoreChannel, DeckyUpdateChannel},
+};
 
 #[derive(Parser)]
 #[command(version, author, about, long_about = None)]
@@ -38,9 +42,16 @@ enum Commands {
 
 #[derive(Subcommand)]
 enum DiffCommands {
-    /// MacOS
+    /// macOS
     #[command(name = "macos")]
     MacOs {
+        /// System configuration file to compare against
+        system_config: PathBuf,
+    },
+
+    /// SteamOS
+    #[command(name = "steamos")]
+    SteamOs {
         /// System configuration file to compare against
         system_config: PathBuf,
     },
@@ -54,6 +65,57 @@ fn sort_paths_by_app_name<T: AsRef<str>>(paths: &mut [T]) {
         let b_name = b.rsplit('/').next().expect("app path should have a slash");
         a_name.cmp(b_name).then_with(|| a.cmp(b))
     });
+}
+
+fn decky_update_channel_name(channel: &DeckyUpdateChannel) -> &'static str {
+    match channel {
+        DeckyUpdateChannel::Stable => "stable",
+        DeckyUpdateChannel::Prerelease => "prerelease",
+    }
+}
+
+fn system_decky_update_channel_name(channel: &steamos::UpdateChannel) -> &'static str {
+    match channel {
+        steamos::UpdateChannel::Stable => "stable",
+        steamos::UpdateChannel::Prerelease => "prerelease",
+    }
+}
+
+fn decky_store_channel_name(channel: &DeckyStoreChannel) -> &'static str {
+    match channel {
+        DeckyStoreChannel::Default => "default",
+        DeckyStoreChannel::Prerelease => "prerelease",
+    }
+}
+
+fn system_decky_store_channel_name(channel: &steamos::StoreChannel) -> &'static str {
+    match channel {
+        steamos::StoreChannel::Default => "default",
+        steamos::StoreChannel::Prerelease => "prerelease",
+    }
+}
+
+fn format_list(items: &[String]) -> String {
+    if items.is_empty() {
+        "(empty)".to_owned()
+    } else {
+        items.join(", ")
+    }
+}
+
+fn print_sections(sections: Vec<(&str, Vec<String>)>) {
+    if sections.is_empty() {
+        println!("No differences found");
+        return;
+    }
+
+    for (title, items) in sections {
+        println!("{}:", title);
+        for item in items {
+            println!("- {}", item);
+        }
+        println!();
+    }
 }
 
 fn main() -> Result<()> {
@@ -186,7 +248,7 @@ fn main() -> Result<()> {
                     sections.push((
                         "Homebrew installation status mismatch",
                         vec![format!(
-                            "config install_homebrew = {}, system has Homebrew = {}",
+                            "config installHomebrew = {}, system has Homebrew = {}",
                             config.install_homebrew, system_has_homebrew
                         )],
                     ));
@@ -424,17 +486,339 @@ fn main() -> Result<()> {
                     }
                 }
 
-                if sections.is_empty() {
-                    println!("No differences found");
-                } else {
-                    for (title, items) in sections {
-                        println!("{}:", title);
-                        for item in items {
-                            println!("- {}", item);
-                        }
-                        println!();
+                print_sections(sections);
+            }
+            DiffCommands::SteamOs { system_config } => {
+                let config = fs::read_to_string(system_config)?;
+                let config = serde_json::from_str::<pkl_types::steamos::SteamOsConfig>(&config)
+                    .context("Failed to read system config")?;
+                config.validate().context("Invalid system config")?;
+
+                let system_hostname = steamos::get_hostname()?;
+                let system_charge_limit = steamos::get_charge_limit()?.unwrap_or(100);
+                let installed_flatpaks = steamos::get_installed_flatpak_apps()?;
+                let user_steam_settings = steamos::get_user_steam_settings()?;
+                let system_decky_installed = steamos::is_decky_installed()?;
+                let enabled_systemd_units = steamos::get_enabled_systemd_units()?;
+
+                let (steam_account_id, steam_user_settings) = {
+                    let steam_user_ids = steamos::get_steam_user_settings_ids()?;
+                    let mut steam_user_ids = steam_user_ids.into_iter();
+                    let steam_account_id = steam_user_ids
+                        .next()
+                        .context("Expected exactly one Steam user settings directory")?;
+                    if steam_user_ids.next().is_some() {
+                        bail!(
+                            "Found multiple Steam user settings directories; only one is currently supported"
+                        );
+                    }
+                    let steam_user_settings = steamos::get_steam_user_settings(&steam_account_id)?;
+                    (steam_account_id, steam_user_settings)
+                };
+
+                let configured_flatpaks: HashSet<&str> = config
+                    .installed_flatpaks
+                    .iter()
+                    .map(String::as_str)
+                    .collect();
+
+                let mut sections: Vec<(&str, Vec<String>)> = Vec::new();
+
+                if config.hostname != system_hostname {
+                    sections.push((
+                        "Hostname mismatch",
+                        vec![format!(
+                            "config hostname = {}, system hostname = {}",
+                            config.hostname, system_hostname
+                        )],
+                    ));
+                }
+
+                {
+                    let mut steam_os_settings_mismatches = Vec::new();
+                    if config.steam_os_settings.steam_developer_mode
+                        != user_steam_settings.developer_mode
+                    {
+                        steam_os_settings_mismatches.push(format!(
+                            "config steamDeveloperMode = {}, system steamDeveloperMode = {}",
+                            config.steam_os_settings.steam_developer_mode,
+                            user_steam_settings.developer_mode
+                        ));
+                    }
+
+                    if config.steam_os_settings.charge_limit != system_charge_limit {
+                        steam_os_settings_mismatches.push(format!(
+                            "config chargeLimit = {}, system chargeLimit = {}",
+                            config.steam_os_settings.charge_limit, system_charge_limit
+                        ));
+                    }
+
+                    if !steam_os_settings_mismatches.is_empty() {
+                        sections.push(("SteamOS settings mismatch", steam_os_settings_mismatches));
                     }
                 }
+
+                {
+                    let mut steam_settings_mismatches = Vec::new();
+                    if config.steam_settings.sign_into_friends
+                        != steam_user_settings.sign_into_friends
+                    {
+                        steam_settings_mismatches.push(format!(
+                            "{} -> config signIntoFriends = {}, system signIntoFriends = {}",
+                            steam_account_id,
+                            config.steam_settings.sign_into_friends,
+                            steam_user_settings.sign_into_friends
+                        ));
+                    }
+
+                    if !steam_settings_mismatches.is_empty() {
+                        sections.push(("Steam settings mismatch", steam_settings_mismatches));
+                    }
+                }
+
+                {
+                    let mut configured_flatpaks_not_installed: Vec<String> = configured_flatpaks
+                        .iter()
+                        .filter(|flatpak| !installed_flatpaks.contains(**flatpak))
+                        .map(|&flatpak| flatpak.to_owned())
+                        .collect();
+                    configured_flatpaks_not_installed.sort();
+                    if !configured_flatpaks_not_installed.is_empty() {
+                        sections.push((
+                            "Configured Flatpaks not installed",
+                            configured_flatpaks_not_installed,
+                        ));
+                    }
+                }
+
+                {
+                    let mut installed_flatpaks_not_configured: Vec<String> = installed_flatpaks
+                        .iter()
+                        .filter(|flatpak| !configured_flatpaks.contains(flatpak.as_str()))
+                        .cloned()
+                        .collect();
+                    installed_flatpaks_not_configured.sort();
+                    if !installed_flatpaks_not_configured.is_empty() {
+                        sections.push((
+                            "Installed Flatpaks not in config",
+                            installed_flatpaks_not_configured,
+                        ));
+                    }
+                }
+
+                if config.decky.is_some() != system_decky_installed {
+                    sections.push((
+                        "Decky installation status mismatch",
+                        vec![format!(
+                            "config decky installed = {}, system Decky installed = {}",
+                            config.decky.is_some(),
+                            system_decky_installed
+                        )],
+                    ));
+                }
+
+                if let (Some(decky), true) = (&config.decky, system_decky_installed) {
+                    let system_decky_settings = steamos::get_decky_settings()?;
+                    let installed_decky_plugins = steamos::get_installed_decky_plugins()?;
+                    let configured_decky_plugins: HashSet<&str> = decky
+                        .plugins
+                        .iter()
+                        .map(|plugin| plugin.name.as_str())
+                        .collect();
+
+                    {
+                        let mut decky_settings_mismatches = Vec::new();
+                        if decky_update_channel_name(&decky.settings.update_channel)
+                            != system_decky_update_channel_name(
+                                &system_decky_settings.update_channel,
+                            )
+                        {
+                            decky_settings_mismatches.push(format!(
+                                "config updateChannel = {}, system updateChannel = {}",
+                                decky_update_channel_name(&decky.settings.update_channel),
+                                system_decky_update_channel_name(
+                                    &system_decky_settings.update_channel,
+                                )
+                            ));
+                        }
+                        if decky_store_channel_name(&decky.settings.store_channel)
+                            != system_decky_store_channel_name(&system_decky_settings.store_channel)
+                        {
+                            decky_settings_mismatches.push(format!(
+                                "config storeChannel = {}, system storeChannel = {}",
+                                decky_store_channel_name(&decky.settings.store_channel),
+                                system_decky_store_channel_name(
+                                    &system_decky_settings.store_channel
+                                )
+                            ));
+                        }
+                        if decky.settings.decky_update_notification
+                            != system_decky_settings.decky_update_notifications
+                        {
+                            decky_settings_mismatches.push(format!(
+                                "config deckyUpdateNotification = {}, system deckyUpdateNotification = {}",
+                                decky.settings.decky_update_notification,
+                                system_decky_settings.decky_update_notifications
+                            ));
+                        }
+                        if decky.settings.plugin_update_notification
+                            != system_decky_settings.plugins_update_notifications
+                        {
+                            decky_settings_mismatches.push(format!(
+                                "config pluginUpdateNotification = {}, system pluginUpdateNotification = {}",
+                                decky.settings.plugin_update_notification,
+                                system_decky_settings.plugins_update_notifications
+                            ));
+                        }
+                        if decky.settings.developer_mode != system_decky_settings.developer_mode {
+                            decky_settings_mismatches.push(format!(
+                                "config developerMode = {}, system developerMode = {}",
+                                decky.settings.developer_mode, system_decky_settings.developer_mode
+                            ));
+                        }
+
+                        if !decky_settings_mismatches.is_empty() {
+                            sections.push(("Decky settings mismatch", decky_settings_mismatches));
+                        }
+                    }
+
+                    {
+                        let mut configured_decky_plugins_not_installed: Vec<String> =
+                            configured_decky_plugins
+                                .iter()
+                                .filter(|plugin_name| {
+                                    !installed_decky_plugins.contains(**plugin_name)
+                                })
+                                .map(|&plugin_name| plugin_name.to_owned())
+                                .collect();
+                        configured_decky_plugins_not_installed.sort();
+                        if !configured_decky_plugins_not_installed.is_empty() {
+                            sections.push((
+                                "Configured Decky plugins not installed",
+                                configured_decky_plugins_not_installed,
+                            ));
+                        }
+                    }
+
+                    {
+                        let mut installed_decky_plugins_not_configured: Vec<String> =
+                            installed_decky_plugins
+                                .iter()
+                                .filter(|plugin_name| {
+                                    !configured_decky_plugins.contains(plugin_name.as_str())
+                                })
+                                .cloned()
+                                .collect();
+                        installed_decky_plugins_not_configured.sort();
+                        if !installed_decky_plugins_not_configured.is_empty() {
+                            sections.push((
+                                "Installed Decky plugins not in config",
+                                installed_decky_plugins_not_configured,
+                            ));
+                        }
+                    }
+
+                    {
+                        let mut decky_plugin_state_mismatches = Vec::new();
+                        for plugin in &decky.plugins {
+                            if !installed_decky_plugins.contains(plugin.name.as_str()) {
+                                continue;
+                            }
+
+                            let system_plugin_disabled = system_decky_settings
+                                .disabled_plugins
+                                .contains(plugin.name.as_str());
+                            if plugin.disabled != system_plugin_disabled {
+                                decky_plugin_state_mismatches.push(format!(
+                                    "{} -> config disabled = {}, system disabled = {}",
+                                    plugin.name, plugin.disabled, system_plugin_disabled
+                                ));
+                            }
+                        }
+                        decky_plugin_state_mismatches.sort();
+                        if !decky_plugin_state_mismatches.is_empty() {
+                            sections.push((
+                                "Decky plugin disabled status mismatch",
+                                decky_plugin_state_mismatches,
+                            ));
+                        }
+                    }
+                }
+
+                {
+                    let configured_enabled_systemd_units: HashSet<&str> = config
+                        .enabled_systemd_units
+                        .iter()
+                        .map(String::as_str)
+                        .collect();
+                    let mut configured_enabled_systemd_units_not_enabled: Vec<String> =
+                        configured_enabled_systemd_units
+                            .iter()
+                            .filter(|unit| !enabled_systemd_units.contains(**unit))
+                            .map(|&unit| unit.to_owned())
+                            .collect();
+                    configured_enabled_systemd_units_not_enabled.sort();
+                    if !configured_enabled_systemd_units_not_enabled.is_empty() {
+                        sections.push((
+                            "Configured enabled systemd units not enabled",
+                            configured_enabled_systemd_units_not_enabled,
+                        ));
+                    }
+                }
+
+                if let Some(desktop) = &config.desktop {
+                    let desktop_files = steamos::get_desktop_files()?;
+                    let configured_desktop_files: HashSet<&str> =
+                        desktop.iter().map(String::as_str).collect();
+
+                    {
+                        let mut configured_desktop_files_missing: Vec<String> =
+                            configured_desktop_files
+                                .iter()
+                                .filter(|file_name| !desktop_files.contains(**file_name))
+                                .map(|&file_name| file_name.to_owned())
+                                .collect();
+                        configured_desktop_files_missing.sort();
+                        if !configured_desktop_files_missing.is_empty() {
+                            sections.push((
+                                "Configured desktop files missing",
+                                configured_desktop_files_missing,
+                            ));
+                        }
+                    }
+
+                    {
+                        let mut desktop_files_not_configured: Vec<String> = desktop_files
+                            .iter()
+                            .filter(|file_name| {
+                                !configured_desktop_files.contains(file_name.as_str())
+                            })
+                            .cloned()
+                            .collect();
+                        desktop_files_not_configured.sort();
+                        if !desktop_files_not_configured.is_empty() {
+                            sections.push((
+                                "Desktop files not in config",
+                                desktop_files_not_configured,
+                            ));
+                        }
+                    }
+                }
+
+                if let Some(kde_plasma_dock) = &config.kde_plasma_dock {
+                    let system_kde_plasma_dock = steamos::get_kde_plasma_dock_apps()?;
+                    if kde_plasma_dock != &system_kde_plasma_dock {
+                        sections.push((
+                            "KDE Plasma dock mismatch",
+                            vec![
+                                format!("config = {}", format_list(kde_plasma_dock)),
+                                format!("system = {}", format_list(&system_kde_plasma_dock)),
+                            ],
+                        ));
+                    }
+                }
+
+                print_sections(sections);
             }
         },
         Commands::Completions { shell } => {

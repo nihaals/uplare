@@ -1,0 +1,52 @@
+module uplare.SteamOs
+
+steamOs: SteamOs
+class SteamOs {
+  hostname: String(isNotEmpty)
+  steamOsSettings: SteamOsSettings
+  steamSettings: SteamSettings
+  /// Flatpak application IDs excluding runtimes.
+  installedFlatpaks: Listing<String(contains("."))>(isDistinct)
+  /// `null` for uninstalled.
+  decky: Decky? = null
+  /// This is not a complete list but a list of units that are enabled. Units not listed are not assumed to be disabled.
+  enabledSystemdUnits: Listing<String(contains("."))>(isDistinct) = new {}
+  /// An exhaustive list of file names in `~/Desktop/` or `null` to not check.
+  desktop: Listing<String>?(this == null || (isNotEmpty && isDistinct)) = null
+  /// An exhaustive ordered list of applications or `null` to not check. Must match KDE Plasma's `launchers` format.
+  kdePlasmaDock: Listing<String>?(this == null || (isNotEmpty && isDistinct)) = null
+}
+
+class SteamOsSettings {
+  /// System > Enable Developer Mode
+  steamDeveloperMode: Boolean = false
+  chargeLimit: UInt(isBetween(50, 100)) = 100
+}
+
+class SteamSettings {
+  signIntoFriends: Boolean = true
+}
+
+class Decky {
+  settings: DeckySettings
+  plugins: Listing<DeckyPlugin>(isNotEmpty && isDistinctBy((plugin) -> plugin.name))
+}
+
+class DeckySettings {
+  updateChannel: "stable" | "prerelease" = "stable"
+  storeChannel: "default" | "prerelease" = "default"
+  deckyUpdateNotification: Boolean = true
+  pluginUpdateNotification: Boolean = true
+  developerMode: Boolean = false
+}
+
+class DeckyPlugin {
+  /// Based on `plugin.json`'s `name` field.
+  name: String(isNotEmpty)
+  disabled: Boolean = false
+}
+
+output {
+  value = steamOs
+  renderer = new JsonRenderer {}
+}

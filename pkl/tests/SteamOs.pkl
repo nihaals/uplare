@@ -1,0 +1,244 @@
+amends "pkl:test"
+
+import "../SteamOs.pkl"
+
+local function noConstraintViolation(value: Any): Boolean =
+  module.catchOrNull(() -> value.toString()) == null
+local function constraintViolation(value: Any): Boolean =
+  module.catchOrNull(() -> value.toString())?.startsWith("Type constraint ") ?? false
+
+facts {
+  // -- installedFlatpaks --
+
+  ["allows flatpaks"] {
+    noConstraintViolation(new SteamOs.SteamOs {
+      hostname = "test"
+      steamOsSettings {}
+      steamSettings {}
+      installedFlatpaks {
+        "org.mozilla.firefox"
+      }
+    })
+    noConstraintViolation(new SteamOs.SteamOs {
+      hostname = "test"
+      steamOsSettings {}
+      steamSettings {}
+      installedFlatpaks {
+        "org.mozilla.firefox"
+        "net.lutris.Lutris"
+      }
+    })
+  }
+  ["disallows flatpak with no dot"] {
+    constraintViolation(new SteamOs.SteamOs {
+      hostname = "test"
+      steamOsSettings {}
+      steamSettings {}
+      installedFlatpaks {
+        "firefox"
+      }
+    })
+  }
+  ["disallows duplicate flatpaks"] {
+    constraintViolation(new SteamOs.SteamOs {
+      hostname = "test"
+      steamOsSettings {}
+      steamSettings {}
+      installedFlatpaks {
+        "org.mozilla.firefox"
+        "org.mozilla.firefox"
+      }
+    })
+  }
+
+  // -- enabledSystemdUnits --
+
+  ["allows systemd units"] {
+    noConstraintViolation(new SteamOs.SteamOs {
+      hostname = "test"
+      steamOsSettings {}
+      steamSettings {}
+      installedFlatpaks {}
+      enabledSystemdUnits {
+        "sshd.service"
+      }
+    })
+    noConstraintViolation(new SteamOs.SteamOs {
+      hostname = "test"
+      steamOsSettings {}
+      steamSettings {}
+      installedFlatpaks {}
+      enabledSystemdUnits {
+        "sshd.service"
+        "avahi-daemon.service"
+      }
+    })
+  }
+  ["disallows systemd unit with no dot"] {
+    constraintViolation(new SteamOs.SteamOs {
+      hostname = "test"
+      steamOsSettings {}
+      steamSettings {}
+      installedFlatpaks {}
+      enabledSystemdUnits {
+        "sshd"
+      }
+    })
+  }
+  ["disallows duplicate systemd units"] {
+    constraintViolation(new SteamOs.SteamOs {
+      hostname = "test"
+      steamOsSettings {}
+      steamSettings {}
+      installedFlatpaks {}
+      enabledSystemdUnits {
+        "sshd.service"
+        "sshd.service"
+      }
+    })
+  }
+
+  // -- desktop --
+
+  ["allows desktop entries"] {
+    noConstraintViolation(new SteamOs.SteamOs {
+      hostname = "test"
+      steamOsSettings {}
+      steamSettings {}
+      installedFlatpaks {}
+      desktop = new Listing {
+        "Return.desktop"
+      }
+    })
+    noConstraintViolation(new SteamOs.SteamOs {
+      hostname = "test"
+      steamOsSettings {}
+      steamSettings {}
+      installedFlatpaks {}
+      desktop = new Listing {
+        "Return.desktop"
+        "steam.desktop"
+      }
+    })
+  }
+  ["disallows duplicate desktop entries"] {
+    constraintViolation(new SteamOs.SteamOs {
+      hostname = "test"
+      steamOsSettings {}
+      steamSettings {}
+      installedFlatpaks {}
+      desktop = new Listing {
+        "Return.desktop"
+        "Return.desktop"
+      }
+    })
+  }
+
+  // -- kdePlasmaDock --
+
+  ["allows kde plasma dock entries"] {
+    noConstraintViolation(new SteamOs.SteamOs {
+      hostname = "test"
+      steamOsSettings {}
+      steamSettings {}
+      installedFlatpaks {}
+      kdePlasmaDock = new Listing {
+        "Return.desktop"
+      }
+    })
+    noConstraintViolation(new SteamOs.SteamOs {
+      hostname = "test"
+      steamOsSettings {}
+      steamSettings {}
+      installedFlatpaks {}
+      kdePlasmaDock = new Listing {
+        "Return.desktop"
+        "steam.desktop"
+      }
+    })
+  }
+  ["disallows duplicate kde plasma dock entries"] {
+    constraintViolation(new SteamOs.SteamOs {
+      hostname = "test"
+      steamOsSettings {}
+      steamSettings {}
+      installedFlatpaks {}
+      kdePlasmaDock = new Listing {
+        "Return.desktop"
+        "Return.desktop"
+      }
+    })
+  }
+
+  // -- chargeLimit --
+
+  ["allows charge limit"] {
+    noConstraintViolation(new SteamOs.SteamOsSettings {
+      chargeLimit = 50
+    })
+    noConstraintViolation(new SteamOs.SteamOsSettings {
+      chargeLimit = 60
+    })
+    noConstraintViolation(new SteamOs.SteamOsSettings {
+      chargeLimit = 100
+    })
+  }
+  ["disallows invalid charge limit"] {
+    constraintViolation(new SteamOs.SteamOsSettings {
+      chargeLimit = 101
+    })
+    constraintViolation(new SteamOs.SteamOsSettings {
+      chargeLimit = -1
+    })
+  }
+
+  // -- plugins --
+
+  ["allows decky plugins"] {
+    noConstraintViolation(new SteamOs.Decky {
+      settings {}
+      plugins {
+        new {
+          name = "HLTB for Deck"
+        }
+      }
+    })
+    noConstraintViolation(new SteamOs.Decky {
+      settings {}
+      plugins {
+        new {
+          name = "HLTB for Deck"
+        }
+        new {
+          name = "ProtonDB Badges"
+          disabled = true
+        }
+      }
+    })
+  }
+  ["disallows duplicate decky plugins"] {
+    constraintViolation(new SteamOs.Decky {
+      settings {}
+      plugins {
+        new {
+          name = "HLTB for Deck"
+        }
+        new {
+          name = "HLTB for Deck"
+        }
+      }
+    })
+    constraintViolation(new SteamOs.Decky {
+      settings {}
+      plugins {
+        new {
+          name = "HLTB for Deck"
+        }
+        new {
+          name = "HLTB for Deck"
+          disabled = true
+        }
+      }
+    })
+  }
+}
