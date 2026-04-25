@@ -98,6 +98,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - runs-on: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - runs-on: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+          - runs-on: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+          - runs-on: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
           - runs-on: macos-26-intel
             target: x86_64-apple-darwin
           - runs-on: macos-latest
@@ -105,6 +113,11 @@ jobs:
     runs-on: ${{ matrix.runs-on }}
     name: Build Rust - ${{ matrix.target }}
     steps:
+      - name: Install musl
+        if: endsWith(matrix.target, '-linux-musl')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
         with:
@@ -139,8 +152,10 @@ jobs:
         run: |
           mkdir -p release-assets/
           cp pkl-package/* release-assets/
-          cp uplare-x86_64-apple-darwin/uplare release-assets/uplare-cli-x86_64-apple-darwin
-          cp uplare-aarch64-apple-darwin/uplare release-assets/uplare-cli-aarch64-apple-darwin
+          for dir in uplare-*/; do
+            target=${dir%/}
+            cp "$target/uplare" "release-assets/uplare-cli-${target#uplare-}"
+          done
       - name: Verify staged release assets
         run: ls -al release-assets/
       - name: Create release
