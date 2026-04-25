@@ -160,4 +160,8 @@ Note: You'll need to run `pkl project resolve` as suggested by Pkl before this w
 
 ## Running without Pkl
 
-If you would like to run `uplare` on a system without `pkl` installed, you can run `pkl eval` on another machine and transfer the JSON. You can also avoid Pkl entirely and create the system config JSON yourself by using the Pkl modules and `serde` types as reference or running `pkl eval` on examples. While Pkl is the only official way of generating a system config's JSON, validation is implemented for both the Pkl modules and in the CLI and there are tests to help avoid drift.
+If you would like to run `uplare` on a system without `pkl` installed, you can:
+
+- Run `pkl eval` on another machine and copy the JSON or simply pipe it over SSH (e.g. `pkl eval deck.pkl | ssh deck 'uplare diff steamos /dev/stdin'`)
+- Avoid Pkl entirely and create the system config JSON yourself by using the Pkl modules and `serde` types as reference or running `pkl eval` on examples
+  - While Pkl is the only official way of generating a system config's JSON, validation is implemented for both the Pkl modules and in the CLI and there are tests to help avoid drift between the two
