@@ -39,6 +39,8 @@ pub struct SteamOsSettings {
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SteamSettings {
+    /// System > 24-hour clock
+    pub twenty_four_hour_clock: bool,
     pub sign_into_friends: bool,
 }
 
@@ -157,6 +159,7 @@ mod tests {
 
     fn steam_settings() -> SteamSettings {
         SteamSettings {
+            twenty_four_hour_clock: true,
             sign_into_friends: true,
         }
     }

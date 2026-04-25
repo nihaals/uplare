@@ -501,7 +501,7 @@ fn main() -> Result<()> {
                 let system_decky_installed = steamos::is_decky_installed()?;
                 let enabled_systemd_units = steamos::get_enabled_systemd_units()?;
 
-                let (steam_account_id, steam_user_settings) = {
+                let (steam_account_id, steam_user_settings, steam_client_user_settings) = {
                     let steam_user_ids = steamos::get_steam_user_settings_ids()?;
                     let mut steam_user_ids = steam_user_ids.into_iter();
                     let steam_account_id = steam_user_ids
@@ -513,7 +513,13 @@ fn main() -> Result<()> {
                         );
                     }
                     let steam_user_settings = steamos::get_steam_user_settings(&steam_account_id)?;
-                    (steam_account_id, steam_user_settings)
+                    let steam_client_user_settings =
+                        steamos::get_steam_client_user_settings(&steam_account_id)?;
+                    (
+                        steam_account_id,
+                        steam_user_settings,
+                        steam_client_user_settings,
+                    )
                 };
 
                 let configured_flatpaks: HashSet<&str> = config
@@ -568,6 +574,17 @@ fn main() -> Result<()> {
                             steam_account_id,
                             config.steam_settings.sign_into_friends,
                             steam_user_settings.sign_into_friends
+                        ));
+                    }
+
+                    if config.steam_settings.twenty_four_hour_clock
+                        != steam_client_user_settings.twenty_four_hour_clock
+                    {
+                        steam_settings_mismatches.push(format!(
+                            "{} -> config twentyFourHourClock = {}, system twentyFourHourClock = {}",
+                            steam_account_id,
+                            config.steam_settings.twenty_four_hour_clock,
+                            steam_client_user_settings.twenty_four_hour_clock,
                         ));
                     }
 

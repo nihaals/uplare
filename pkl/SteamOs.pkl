@@ -24,6 +24,8 @@ class SteamOsSettings {
 }
 
 class SteamSettings {
+  /// System > 24-hour clock
+  twentyFourHourClock: Boolean
   signIntoFriends: Boolean = true
 }
 

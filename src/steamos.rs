@@ -406,10 +406,6 @@ fn parse_user_steam_settings(config: &str) -> Result<UserSteamSettings> {
     Ok(UserSteamSettings { developer_mode })
 }
 
-pub struct SteamUserSettings {
-    pub sign_into_friends: bool,
-}
-
 /// Resolves `~/.local/share/Steam/userdata/*/config/localconfig.vdf`
 pub fn get_steam_user_settings_ids() -> Result<HashSet<String>> {
     let home_dir: PathBuf = env::var("HOME")
@@ -443,6 +439,10 @@ pub fn get_steam_user_settings_ids() -> Result<HashSet<String>> {
     Ok(steam_account_ids)
 }
 
+pub struct SteamUserSettings {
+    pub sign_into_friends: bool,
+}
+
 /// Get settings from `~/.local/share/Steam/userdata/*/config/localconfig.vdf`
 pub fn get_steam_user_settings(steam_account_id: &str) -> Result<SteamUserSettings> {
     let home_dir: PathBuf = env::var("HOME")
@@ -472,6 +472,44 @@ fn parse_steam_user_settings(config: &str) -> Result<SteamUserSettings> {
     };
 
     Ok(SteamUserSettings { sign_into_friends })
+}
+
+pub struct SteamClientUserSettings {
+    pub twenty_four_hour_clock: bool,
+}
+
+/// Get settings from `~/.local/share/Steam/userdata/*/7/remote/sharedconfig.vdf`
+pub fn get_steam_client_user_settings(steam_account_id: &str) -> Result<SteamClientUserSettings> {
+    let home_dir: PathBuf = env::var("HOME")
+        .context("HOME environment variable not set")?
+        .into();
+    let config_path = home_dir.join(format!(
+        ".local/share/Steam/userdata/{steam_account_id}/7/remote/sharedconfig.vdf"
+    ));
+    let config = fs::read_to_string(&config_path)
+        .with_context(|| format!("Failed to read `{}`", config_path.display()))?;
+    parse_steam_client_user_settings(&config)
+        .with_context(|| format!("Failed to parse `{}`", config_path.display()))
+}
+
+#[derive(Deserialize)]
+struct RawSteamClientFriendsUiSettings {
+    #[serde(rename = "b24HourClock")]
+    twenty_four_hour_clock: bool,
+}
+
+fn parse_steam_client_user_settings(config: &str) -> Result<SteamClientUserSettings> {
+    let vdf = steam_vdf_parser::parse_text(config).context("Config is not valid VDF")?;
+    let raw_friends_ui_json = vdf
+        .get_str(&["Software", "Valve", "Steam", "friendsui", "FriendsUIJSON"])
+        .context("missing `Software/Valve/Steam/friendsui/FriendsUIJSON`")?;
+    let friends_ui_settings: RawSteamClientFriendsUiSettings =
+        serde_json::from_str(raw_friends_ui_json)
+            .context("`Software/Valve/Steam/friendsui/FriendsUIJSON` is not valid JSON")?;
+
+    Ok(SteamClientUserSettings {
+        twenty_four_hour_clock: friends_ui_settings.twenty_four_hour_clock,
+    })
 }
 
 #[cfg(test)]
@@ -894,6 +932,129 @@ mod tests {
                 r#"    {"#,
                 "\n",
                 r#"        "b"        "0""#,
+                "\n",
+                r#"    }"#,
+                "\n",
+                r#"}"#,
+                "\n",
+            ))
+            .is_err(),
+        );
+    }
+
+    #[test]
+    fn test_parse_steam_client_user_settings_valid() {
+        let settings = parse_steam_client_user_settings(concat!(
+            r#""UserRoamingConfigStore""#,
+            "\n",
+            r#"{"#,
+            "\n",
+            r#"    "Software""#,
+            "\n",
+            r#"    {"#,
+            "\n",
+            r#"        "Valve""#,
+            "\n",
+            r#"        {"#,
+            "\n",
+            r#"            "Steam""#,
+            "\n",
+            r#"            {"#,
+            "\n",
+            r#"                "friendsui""#,
+            "\n",
+            r#"                {"#,
+            "\n",
+            r#"                    "FriendsUIJSON"         "{\"b24HourClock\":true}""#,
+            "\n",
+            r#"                }"#,
+            "\n",
+            r#"            }"#,
+            "\n",
+            r#"        }"#,
+            "\n",
+            r#"    }"#,
+            "\n",
+            r#"}"#,
+            "\n",
+        ))
+        .unwrap();
+
+        assert!(settings.twenty_four_hour_clock);
+    }
+
+    #[test]
+    fn test_parse_steam_client_user_settings_invalid_value() {
+        assert!(
+            parse_steam_client_user_settings(concat!(
+                r#""UserRoamingConfigStore""#,
+                "\n",
+                r#"{"#,
+                "\n",
+                r#"    "Software""#,
+                "\n",
+                r#"    {"#,
+                "\n",
+                r#"        "Valve""#,
+                "\n",
+                r#"        {"#,
+                "\n",
+                r#"            "Steam""#,
+                "\n",
+                r#"            {"#,
+                "\n",
+                r#"                "friendsui""#,
+                "\n",
+                r#"                {"#,
+                "\n",
+                r#"                    "FriendsUIJSON"         "{\"b24HourClock\":1}""#,
+                "\n",
+                r#"                }"#,
+                "\n",
+                r#"            }"#,
+                "\n",
+                r#"        }"#,
+                "\n",
+                r#"    }"#,
+                "\n",
+                r#"}"#,
+                "\n",
+            ))
+            .is_err(),
+        );
+    }
+
+    #[test]
+    fn test_parse_steam_client_user_settings_missing_value() {
+        assert!(
+            parse_steam_client_user_settings(concat!(
+                r#""UserRoamingConfigStore""#,
+                "\n",
+                r#"{"#,
+                "\n",
+                r#"    "Software""#,
+                "\n",
+                r#"    {"#,
+                "\n",
+                r#"        "Valve""#,
+                "\n",
+                r#"        {"#,
+                "\n",
+                r#"            "Steam""#,
+                "\n",
+                r#"            {"#,
+                "\n",
+                r#"                "a""#,
+                "\n",
+                r#"                {"#,
+                "\n",
+                r#"                    "b"         "{\"b24HourClock\":true}""#,
+                "\n",
+                r#"                }"#,
+                "\n",
+                r#"            }"#,
+                "\n",
+                r#"        }"#,
                 "\n",
                 r#"    }"#,
                 "\n",

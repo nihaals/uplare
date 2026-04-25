@@ -14,7 +14,9 @@ facts {
     noConstraintViolation(new SteamOs.SteamOs {
       hostname = "test"
       steamOsSettings {}
-      steamSettings {}
+      steamSettings {
+        twentyFourHourClock = true
+      }
       installedFlatpaks {
         "org.mozilla.firefox"
       }
@@ -22,7 +24,9 @@ facts {
     noConstraintViolation(new SteamOs.SteamOs {
       hostname = "test"
       steamOsSettings {}
-      steamSettings {}
+      steamSettings {
+        twentyFourHourClock = true
+      }
       installedFlatpaks {
         "org.mozilla.firefox"
         "net.lutris.Lutris"
@@ -33,7 +37,9 @@ facts {
     constraintViolation(new SteamOs.SteamOs {
       hostname = "test"
       steamOsSettings {}
-      steamSettings {}
+      steamSettings {
+        twentyFourHourClock = true
+      }
       installedFlatpaks {
         "firefox"
       }
@@ -43,7 +49,9 @@ facts {
     constraintViolation(new SteamOs.SteamOs {
       hostname = "test"
       steamOsSettings {}
-      steamSettings {}
+      steamSettings {
+        twentyFourHourClock = true
+      }
       installedFlatpaks {
         "org.mozilla.firefox"
         "org.mozilla.firefox"
@@ -57,7 +65,9 @@ facts {
     noConstraintViolation(new SteamOs.SteamOs {
       hostname = "test"
       steamOsSettings {}
-      steamSettings {}
+      steamSettings {
+        twentyFourHourClock = true
+      }
       installedFlatpaks {}
       enabledSystemdUnits {
         "sshd.service"
@@ -66,7 +76,9 @@ facts {
     noConstraintViolation(new SteamOs.SteamOs {
       hostname = "test"
       steamOsSettings {}
-      steamSettings {}
+      steamSettings {
+        twentyFourHourClock = true
+      }
       installedFlatpaks {}
       enabledSystemdUnits {
         "sshd.service"
@@ -78,7 +90,9 @@ facts {
     constraintViolation(new SteamOs.SteamOs {
       hostname = "test"
       steamOsSettings {}
-      steamSettings {}
+      steamSettings {
+        twentyFourHourClock = true
+      }
       installedFlatpaks {}
       enabledSystemdUnits {
         "sshd"
@@ -89,7 +103,9 @@ facts {
     constraintViolation(new SteamOs.SteamOs {
       hostname = "test"
       steamOsSettings {}
-      steamSettings {}
+      steamSettings {
+        twentyFourHourClock = true
+      }
       installedFlatpaks {}
       enabledSystemdUnits {
         "sshd.service"
@@ -104,7 +120,9 @@ facts {
     noConstraintViolation(new SteamOs.SteamOs {
       hostname = "test"
       steamOsSettings {}
-      steamSettings {}
+      steamSettings {
+        twentyFourHourClock = true
+      }
       installedFlatpaks {}
       desktop = new Listing {
         "Return.desktop"
@@ -113,7 +131,9 @@ facts {
     noConstraintViolation(new SteamOs.SteamOs {
       hostname = "test"
       steamOsSettings {}
-      steamSettings {}
+      steamSettings {
+        twentyFourHourClock = true
+      }
       installedFlatpaks {}
       desktop = new Listing {
         "Return.desktop"
@@ -125,7 +145,9 @@ facts {
     constraintViolation(new SteamOs.SteamOs {
       hostname = "test"
       steamOsSettings {}
-      steamSettings {}
+      steamSettings {
+        twentyFourHourClock = true
+      }
       installedFlatpaks {}
       desktop = new Listing {
         "Return.desktop"
@@ -140,7 +162,9 @@ facts {
     noConstraintViolation(new SteamOs.SteamOs {
       hostname = "test"
       steamOsSettings {}
-      steamSettings {}
+      steamSettings {
+        twentyFourHourClock = true
+      }
       installedFlatpaks {}
       kdePlasmaDock = new Listing {
         "Return.desktop"
@@ -149,7 +173,9 @@ facts {
     noConstraintViolation(new SteamOs.SteamOs {
       hostname = "test"
       steamOsSettings {}
-      steamSettings {}
+      steamSettings {
+        twentyFourHourClock = true
+      }
       installedFlatpaks {}
       kdePlasmaDock = new Listing {
         "Return.desktop"
@@ -161,7 +187,9 @@ facts {
     constraintViolation(new SteamOs.SteamOs {
       hostname = "test"
       steamOsSettings {}
-      steamSettings {}
+      steamSettings {
+        twentyFourHourClock = true
+      }
       installedFlatpaks {}
       kdePlasmaDock = new Listing {
         "Return.desktop"
