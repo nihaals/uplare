@@ -32,7 +32,9 @@ chmod +x uplare
 ./uplare --help
 ```
 
-## Getting started (macOS)
+## Getting started
+
+### macOS
 
 1. Install [Pkl](https://github.com/apple/pkl)
 2. Create `mac.pkl`:
@@ -67,6 +69,65 @@ mac {
 ```
 
 3. Run `pkl eval mac.pkl | uplare diff macos /dev/stdin`
+4. Run `uplare --help`
+
+### SteamOS
+
+1. Install [Pkl](https://github.com/apple/pkl)
+2. Create `deck.pkl`:
+
+```pkl
+// Replace with version from `uplare --version`
+amends "package://github.com/nihaals/uplare/releases/download/v0.0.0/uplare-pkl@0.0.0#/SteamOs.pkl"
+
+steamOs {
+  hostname = "my-device"
+  steamOsSettings {
+    steamDeveloperMode = true
+    chargeLimit = 80
+  }
+  steamSettings {
+    twentyFourHourClock = true
+    signIntoFriends = false
+  }
+  installedFlatpaks {
+    "org.mozilla.firefox"
+    "com.github.Matoking.protontricks"
+  }
+  decky = new Decky {
+    settings {
+      updateChannel = "stable"
+      storeChannel = "default"
+      deckyUpdateNotification = true
+      pluginUpdateNotification = true
+      developerMode = true
+    }
+    plugins {
+      new { name = "Brightness Bar" }
+      new {
+        name = "HLTB for Deck"
+        disabled = true
+      }
+    }
+  }
+  enabledSystemdUnits {
+    "sshd.service"
+    "plugin_loader.service"
+  }
+  desktop = new Listing {
+    "Return.desktop"
+    "steam.desktop"
+  }
+  kdePlasmaDock = new Listing {
+    "applications:systemsettings.desktop"
+    "applications:org.kde.discover.desktop"
+    "preferred://filemanager"
+    "preferred://browser"
+  }
+}
+```
+
+3. Run `pkl eval deck.pkl | uplare diff steamos /dev/stdin`
 4. Run `uplare --help`
 
 ## Supported properties

@@ -54,4 +54,57 @@ examples {
     
     """
   }
+  ["steamos"] {
+    """
+    {
+      "hostname": "my-device",
+      "steamOsSettings": {
+        "steamDeveloperMode": true,
+        "chargeLimit": 80
+      },
+      "steamSettings": {
+        "twentyFourHourClock": true,
+        "signIntoFriends": false
+      },
+      "installedFlatpaks": [
+        "org.mozilla.firefox",
+        "com.github.Matoking.protontricks"
+      ],
+      "decky": {
+        "settings": {
+          "updateChannel": "stable",
+          "storeChannel": "default",
+          "deckyUpdateNotification": true,
+          "pluginUpdateNotification": true,
+          "developerMode": true
+        },
+        "plugins": [
+          {
+            "name": "Brightness Bar",
+            "disabled": false
+          },
+          {
+            "name": "HLTB for Deck",
+            "disabled": true
+          }
+        ]
+      },
+      "enabledSystemdUnits": [
+        "sshd.service",
+        "plugin_loader.service"
+      ],
+      "desktop": [
+        "Return.desktop",
+        "steam.desktop"
+      ],
+      "kdePlasmaDock": [
+        "applications:systemsettings.desktop",
+        "applications:org.kde.discover.desktop",
+        "preferred://filemanager",
+        "preferred://browser"
+      ]
+    }
+    
+    """
+  }
 }

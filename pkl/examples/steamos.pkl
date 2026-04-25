@@ -1,0 +1,47 @@
+amends "../SteamOs.pkl"
+
+steamOs {
+  hostname = "my-device"
+  steamOsSettings {
+    steamDeveloperMode = true
+    chargeLimit = 80
+  }
+  steamSettings {
+    twentyFourHourClock = true
+    signIntoFriends = false
+  }
+  installedFlatpaks {
+    "org.mozilla.firefox"
+    "com.github.Matoking.protontricks"
+  }
+  decky = new Decky {
+    settings {
+      updateChannel = "stable"
+      storeChannel = "default"
+      deckyUpdateNotification = true
+      pluginUpdateNotification = true
+      developerMode = true
+    }
+    plugins {
+      new { name = "Brightness Bar" }
+      new {
+        name = "HLTB for Deck"
+        disabled = true
+      }
+    }
+  }
+  enabledSystemdUnits {
+    "sshd.service"
+    "plugin_loader.service"
+  }
+  desktop = new Listing {
+    "Return.desktop"
+    "steam.desktop"
+  }
+  kdePlasmaDock = new Listing {
+    "applications:systemsettings.desktop"
+    "applications:org.kde.discover.desktop"
+    "preferred://filemanager"
+    "preferred://browser"
+  }
+}
