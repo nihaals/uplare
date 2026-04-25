@@ -249,7 +249,7 @@ fn main() -> Result<()> {
                         "Homebrew installation status mismatch",
                         vec![format!(
                             "config installHomebrew = {}, system has Homebrew = {}",
-                            config.install_homebrew, system_has_homebrew
+                            config.install_homebrew, system_has_homebrew,
                         )],
                     ));
                 }
@@ -268,7 +268,7 @@ fn main() -> Result<()> {
                             manual_apps_with_missing_paths.push(format!(
                                 "{} -> missing {}",
                                 app_name,
-                                missing_paths.join(", ")
+                                missing_paths.join(", "),
                             ));
                         }
                     }
@@ -329,7 +329,7 @@ fn main() -> Result<()> {
                             casks_with_missing_paths.push(format!(
                                 "{} -> missing {}",
                                 cask_name,
-                                missing_paths.join(", ")
+                                missing_paths.join(", "),
                             ));
                         }
                     }
@@ -398,7 +398,7 @@ fn main() -> Result<()> {
                             app_store_apps_with_missing_paths.push(format!(
                                 "{} -> missing {}",
                                 app_store_id,
-                                missing_paths.join(", ")
+                                missing_paths.join(", "),
                             ));
                         }
                     }
@@ -461,7 +461,7 @@ fn main() -> Result<()> {
                             testflight_apps_with_missing_paths.push(format!(
                                 "{} -> missing {}",
                                 app_name,
-                                missing_paths.join(", ")
+                                missing_paths.join(", "),
                             ));
                         }
                     }
@@ -535,7 +535,7 @@ fn main() -> Result<()> {
                         "Hostname mismatch",
                         vec![format!(
                             "config hostname = {}, system hostname = {}",
-                            config.hostname, system_hostname
+                            config.hostname, system_hostname,
                         )],
                     ));
                 }
@@ -548,14 +548,14 @@ fn main() -> Result<()> {
                         steam_os_settings_mismatches.push(format!(
                             "config steamDeveloperMode = {}, system steamDeveloperMode = {}",
                             config.steam_os_settings.steam_developer_mode,
-                            user_steam_settings.developer_mode
+                            user_steam_settings.developer_mode,
                         ));
                     }
 
                     if config.steam_os_settings.charge_limit != system_charge_limit {
                         steam_os_settings_mismatches.push(format!(
                             "config chargeLimit = {}, system chargeLimit = {}",
-                            config.steam_os_settings.charge_limit, system_charge_limit
+                            config.steam_os_settings.charge_limit, system_charge_limit,
                         ));
                     }
 
@@ -573,7 +573,7 @@ fn main() -> Result<()> {
                             "{} -> config signIntoFriends = {}, system signIntoFriends = {}",
                             steam_account_id,
                             config.steam_settings.sign_into_friends,
-                            steam_user_settings.sign_into_friends
+                            steam_user_settings.sign_into_friends,
                         ));
                     }
 
@@ -629,7 +629,7 @@ fn main() -> Result<()> {
                         vec![format!(
                             "config decky installed = {}, system Decky installed = {}",
                             config.decky.is_some(),
-                            system_decky_installed
+                            system_decky_installed,
                         )],
                     ));
                 }
@@ -655,7 +655,7 @@ fn main() -> Result<()> {
                                 decky_update_channel_name(&decky.settings.update_channel),
                                 system_decky_update_channel_name(
                                     &system_decky_settings.update_channel,
-                                )
+                                ),
                             ));
                         }
                         if decky_store_channel_name(&decky.settings.store_channel)
@@ -665,8 +665,8 @@ fn main() -> Result<()> {
                                 "config storeChannel = {}, system storeChannel = {}",
                                 decky_store_channel_name(&decky.settings.store_channel),
                                 system_decky_store_channel_name(
-                                    &system_decky_settings.store_channel
-                                )
+                                    &system_decky_settings.store_channel,
+                                ),
                             ));
                         }
                         if decky.settings.decky_update_notification
@@ -675,7 +675,7 @@ fn main() -> Result<()> {
                             decky_settings_mismatches.push(format!(
                                 "config deckyUpdateNotification = {}, system deckyUpdateNotification = {}",
                                 decky.settings.decky_update_notification,
-                                system_decky_settings.decky_update_notifications
+                                system_decky_settings.decky_update_notifications,
                             ));
                         }
                         if decky.settings.plugin_update_notification
@@ -684,13 +684,13 @@ fn main() -> Result<()> {
                             decky_settings_mismatches.push(format!(
                                 "config pluginUpdateNotification = {}, system pluginUpdateNotification = {}",
                                 decky.settings.plugin_update_notification,
-                                system_decky_settings.plugins_update_notifications
+                                system_decky_settings.plugins_update_notifications,
                             ));
                         }
                         if decky.settings.developer_mode != system_decky_settings.developer_mode {
                             decky_settings_mismatches.push(format!(
                                 "config developerMode = {}, system developerMode = {}",
-                                decky.settings.developer_mode, system_decky_settings.developer_mode
+                                decky.settings.developer_mode, system_decky_settings.developer_mode,
                             ));
                         }
 
@@ -748,7 +748,7 @@ fn main() -> Result<()> {
                             if plugin.disabled != system_plugin_disabled {
                                 decky_plugin_state_mismatches.push(format!(
                                     "{} -> config disabled = {}, system disabled = {}",
-                                    plugin.name, plugin.disabled, system_plugin_disabled
+                                    plugin.name, plugin.disabled, system_plugin_disabled,
                                 ));
                             }
                         }
