@@ -32,7 +32,7 @@ chmod +x uplare
 ./uplare --help
 ```
 
-## Getting started
+## Getting started (macOS)
 
 1. Install [Pkl](https://github.com/apple/pkl)
 2. Create `mac.pkl`:
