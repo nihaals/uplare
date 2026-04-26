@@ -244,6 +244,41 @@ facts {
       }
     })
   }
+  ["allows decky plugin directory names"] {
+    noConstraintViolation(new SteamOs.Decky {
+      settings {}
+      plugins {
+        new {
+          name = "HLTB for Deck"
+          directoryName = "hltb-for-deck"
+        }
+      }
+    })
+    noConstraintViolation(new SteamOs.Decky {
+      settings {}
+      plugins {
+        new {
+          name = "HLTB for Deck"
+          directoryName = "hltb-for-deck"
+        }
+        new {
+          name = "ProtonDB Badges"
+          directoryName = "protondb-decky"
+          disabled = true
+        }
+      }
+    })
+  }
+  ["disallows invalid decky plugin directory names"] {
+    constraintViolation(new SteamOs.DeckyPlugin {
+      name = "HLTB for Deck"
+      directoryName = ""
+    })
+    constraintViolation(new SteamOs.DeckyPlugin {
+      name = "HLTB for Deck"
+      directoryName = "hltb_for_deck"
+    })
+  }
   ["disallows duplicate decky plugins"] {
     constraintViolation(new SteamOs.Decky {
       settings {}
@@ -264,6 +299,22 @@ facts {
         }
         new {
           name = "HLTB for Deck"
+          disabled = true
+        }
+      }
+    })
+  }
+  ["disallows duplicate decky plugin directory names"] {
+    constraintViolation(new SteamOs.Decky {
+      settings {}
+      plugins {
+        new {
+          name = "HLTB for Deck"
+          directoryName = "shared-directory"
+        }
+        new {
+          name = "ProtonDB Badges"
+          directoryName = "shared-directory"
           disabled = true
         }
       }

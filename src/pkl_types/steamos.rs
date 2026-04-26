@@ -362,6 +362,53 @@ mod tests {
     }
 
     #[test]
+    fn allows_decky_plugin_directory_names() {
+        let decky = Decky {
+            settings: decky_settings(),
+            plugins: vec![DeckyPlugin {
+                name: "HLTB for Deck".to_owned(),
+                directory_name: Some("hltb-for-deck".to_owned()),
+                disabled: false,
+            }],
+        };
+        assert!(no_constraint_violation(&decky));
+
+        let decky = Decky {
+            settings: decky_settings(),
+            plugins: vec![
+                DeckyPlugin {
+                    name: "HLTB for Deck".to_owned(),
+                    directory_name: Some("hltb-for-deck".to_owned()),
+                    disabled: false,
+                },
+                DeckyPlugin {
+                    name: "ProtonDB Badges".to_owned(),
+                    directory_name: Some("protondb-decky".to_owned()),
+                    disabled: true,
+                },
+            ],
+        };
+        assert!(no_constraint_violation(&decky));
+    }
+
+    #[test]
+    fn disallows_invalid_decky_plugin_directory_names() {
+        let plugin = DeckyPlugin {
+            name: "HLTB for Deck".to_owned(),
+            directory_name: Some("".to_owned()),
+            disabled: false,
+        };
+        assert!(constraint_violation(&plugin));
+
+        let plugin = DeckyPlugin {
+            name: "HLTB for Deck".to_owned(),
+            directory_name: Some("hltb_for_deck".to_owned()),
+            disabled: false,
+        };
+        assert!(constraint_violation(&plugin));
+    }
+
+    #[test]
     fn disallows_duplicate_decky_plugins() {
         let decky = Decky {
             settings: decky_settings(),
@@ -376,6 +423,26 @@ mod tests {
                 DeckyPlugin {
                     name: "HLTB for Deck".to_owned(),
                     directory_name: None,
+                    disabled: true,
+                },
+            ],
+        };
+        assert!(constraint_violation(&decky));
+    }
+
+    #[test]
+    fn disallows_duplicate_decky_plugin_directory_names() {
+        let decky = Decky {
+            settings: decky_settings(),
+            plugins: vec![
+                DeckyPlugin {
+                    name: "HLTB for Deck".to_owned(),
+                    directory_name: Some("shared-directory".to_owned()),
+                    disabled: false,
+                },
+                DeckyPlugin {
+                    name: "ProtonDB Badges".to_owned(),
+                    directory_name: Some("shared-directory".to_owned()),
                     disabled: true,
                 },
             ],
