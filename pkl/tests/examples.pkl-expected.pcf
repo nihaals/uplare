@@ -59,12 +59,12 @@ examples {
     {
       "hostname": "my-device",
       "steamOsSettings": {
-        "steamDeveloperMode": true,
-        "chargeLimit": 80
+        "steamDeveloperMode": false,
+        "chargeLimit": 100
       },
       "steamSettings": {
         "twentyFourHourClock": true,
-        "signIntoFriends": false
+        "signIntoFriends": true
       },
       "installedFlatpaks": [
         "org.mozilla.firefox",
@@ -76,7 +76,7 @@ examples {
           "storeChannel": "default",
           "deckyUpdateNotification": true,
           "pluginUpdateNotification": true,
-          "developerMode": true
+          "developerMode": false
         },
         "plugins": [
           {
@@ -91,20 +91,7 @@ examples {
           }
         ]
       },
-      "enabledSystemdUnits": [
-        "sshd.service",
-        "plugin_loader.service"
-      ],
-      "desktop": [
-        "Return.desktop",
-        "steam.desktop"
-      ],
-      "kdePlasmaDock": [
-        "applications:systemsettings.desktop",
-        "applications:org.kde.discover.desktop",
-        "preferred://filemanager",
-        "preferred://browser"
-      ]
+      "enabledSystemdUnits": []
     }
     
     """

@@ -2,26 +2,16 @@ amends "../SteamOs.pkl"
 
 steamOs {
   hostname = "my-device"
-  steamOsSettings {
-    steamDeveloperMode = true
-    chargeLimit = 80
-  }
+  steamOsSettings {}
   steamSettings {
     twentyFourHourClock = true
-    signIntoFriends = false
   }
   installedFlatpaks {
     "org.mozilla.firefox"
     "com.github.Matoking.protontricks"
   }
   decky = new Decky {
-    settings {
-      updateChannel = "stable"
-      storeChannel = "default"
-      deckyUpdateNotification = true
-      pluginUpdateNotification = true
-      developerMode = true
-    }
+    settings {}
     local plugins: Listing<DeckyPlugin(directoryName != null)>(
       toList().sortBy((plugin) -> plugin.name) == toList(),
     ) = new {
@@ -36,19 +26,5 @@ steamOs {
       }
     }
     plugins = plugins
-  }
-  enabledSystemdUnits {
-    "sshd.service"
-    "plugin_loader.service"
-  }
-  desktop = new Listing {
-    "Return.desktop"
-    "steam.desktop"
-  }
-  kdePlasmaDock = new Listing {
-    "applications:systemsettings.desktop"
-    "applications:org.kde.discover.desktop"
-    "preferred://filemanager"
-    "preferred://browser"
   }
 }
