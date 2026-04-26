@@ -31,7 +31,11 @@ class SteamSettings {
 
 class Decky {
   settings: DeckySettings
-  plugins: Listing<DeckyPlugin>(isNotEmpty && isDistinctBy((plugin) -> plugin.name))
+  plugins: Listing<DeckyPlugin>(
+    isNotEmpty
+      && isDistinctBy((plugin) -> plugin.name)
+      && isDistinctBy((plugin) -> plugin.directoryName ?? "/\(plugin.name)"),
+  )
 }
 
 class DeckySettings {
@@ -45,6 +49,7 @@ class DeckySettings {
 class DeckyPlugin {
   /// Based on `plugin.json`'s `name` field.
   name: String(isNotEmpty)
+  directoryName: String(isNotEmpty && matches(Regex(#"[A-Za-z0-9-]+"#)))?
   disabled: Boolean = false
 }
 

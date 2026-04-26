@@ -51,7 +51,7 @@ pub struct Decky {
     #[validate(
         length(min = 1),
         nested,
-        custom(function = "validate_distinct_plugin_names")
+        custom(function = "validate_distinct_plugins")
     )]
     pub plugins: Vec<DeckyPlugin>,
 }
@@ -72,6 +72,8 @@ pub struct DeckyPlugin {
     /// Based on `plugin.json`'s `name` field.
     #[validate(length(min = 1))]
     pub name: String,
+    #[validate(custom(function = "validate_plugin_directory_name"))]
+    pub directory_name: Option<String>,
     pub disabled: bool,
 }
 
@@ -123,11 +125,33 @@ fn validate_non_empty_distinct_strings(values: &Vec<String>) -> Result<(), Valid
     Ok(())
 }
 
-fn validate_distinct_plugin_names(plugins: &Vec<DeckyPlugin>) -> Result<(), ValidationError> {
+fn validate_plugin_directory_name(value: &str) -> Result<(), ValidationError> {
+    if value.is_empty() {
+        return Err(ValidationError::new("empty_directory_name"));
+    }
+
+    if !value
+        .chars()
+        .all(|char| char.is_ascii_alphanumeric() || char == '-')
+    {
+        return Err(ValidationError::new("invalid_directory_name"));
+    }
+
+    Ok(())
+}
+
+fn validate_distinct_plugins(plugins: &Vec<DeckyPlugin>) -> Result<(), ValidationError> {
     let mut plugin_names = HashSet::new();
+    let mut plugin_directory_names = HashSet::new();
     for plugin in plugins {
-        if !plugin_names.insert(plugin.name.as_str()) {
+        if !plugin_names.insert(&plugin.name) {
             return Err(ValidationError::new("duplicate_plugin_name"));
+        }
+
+        if let Some(directory_name) = &plugin.directory_name
+            && !plugin_directory_names.insert(directory_name)
+        {
+            return Err(ValidationError::new("duplicate_plugin_directory_name"));
         }
     }
 
@@ -177,6 +201,7 @@ mod tests {
     fn decky_plugin(name: &str) -> DeckyPlugin {
         DeckyPlugin {
             name: name.to_owned(),
+            directory_name: None,
             disabled: false,
         }
     }
@@ -328,6 +353,7 @@ mod tests {
                 decky_plugin("HLTB for Deck"),
                 DeckyPlugin {
                     name: "ProtonDB Badges".to_owned(),
+                    directory_name: None,
                     disabled: true,
                 },
             ],
@@ -349,6 +375,7 @@ mod tests {
                 decky_plugin("HLTB for Deck"),
                 DeckyPlugin {
                     name: "HLTB for Deck".to_owned(),
+                    directory_name: None,
                     disabled: true,
                 },
             ],

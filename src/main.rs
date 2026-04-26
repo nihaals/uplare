@@ -95,6 +95,29 @@ fn system_decky_store_channel_name(channel: &steamos::StoreChannel) -> &'static 
     }
 }
 
+fn configured_decky_plugin_matches_installed(
+    configured: &pkl_types::steamos::DeckyPlugin,
+    installed: &steamos::DeckyPlugin,
+) -> bool {
+    match configured.directory_name.as_deref() {
+        Some(directory_name) => {
+            installed.name == configured.name && installed.directory_name == directory_name
+        }
+        None => installed.name == configured.name,
+    }
+}
+
+fn format_configured_decky_plugin(plugin: &pkl_types::steamos::DeckyPlugin) -> String {
+    match plugin.directory_name.as_deref() {
+        Some(directory_name) => format!("{} ({})", plugin.name, directory_name),
+        None => plugin.name.clone(),
+    }
+}
+
+fn format_installed_decky_plugin(plugin: &steamos::DeckyPlugin) -> String {
+    format!("{} ({})", plugin.name, plugin.directory_name)
+}
+
 fn format_list(items: &[String]) -> String {
     if items.is_empty() {
         "(empty)".to_owned()
@@ -637,11 +660,6 @@ fn main() -> Result<()> {
                 if let (Some(decky), true) = (&config.decky, system_decky_installed) {
                     let system_decky_settings = steamos::get_decky_settings()?;
                     let installed_decky_plugins = steamos::get_installed_decky_plugins()?;
-                    let configured_decky_plugins: HashSet<&str> = decky
-                        .plugins
-                        .iter()
-                        .map(|plugin| plugin.name.as_str())
-                        .collect();
 
                     {
                         let mut decky_settings_mismatches = Vec::new();
@@ -700,14 +718,19 @@ fn main() -> Result<()> {
                     }
 
                     {
-                        let mut configured_decky_plugins_not_installed: Vec<String> =
-                            configured_decky_plugins
-                                .iter()
-                                .filter(|plugin_name| {
-                                    !installed_decky_plugins.contains(**plugin_name)
+                        let mut configured_decky_plugins_not_installed: Vec<String> = decky
+                            .plugins
+                            .iter()
+                            .filter(|plugin| {
+                                !installed_decky_plugins.iter().any(|installed_plugin| {
+                                    configured_decky_plugin_matches_installed(
+                                        plugin,
+                                        installed_plugin,
+                                    )
                                 })
-                                .map(|&plugin_name| plugin_name.to_owned())
-                                .collect();
+                            })
+                            .map(format_configured_decky_plugin)
+                            .collect();
                         configured_decky_plugins_not_installed.sort();
                         if !configured_decky_plugins_not_installed.is_empty() {
                             sections.push((
@@ -721,10 +744,15 @@ fn main() -> Result<()> {
                         let mut installed_decky_plugins_not_configured: Vec<String> =
                             installed_decky_plugins
                                 .iter()
-                                .filter(|plugin_name| {
-                                    !configured_decky_plugins.contains(plugin_name.as_str())
+                                .filter(|installed_plugin| {
+                                    !decky.plugins.iter().any(|plugin| {
+                                        configured_decky_plugin_matches_installed(
+                                            plugin,
+                                            installed_plugin,
+                                        )
+                                    })
                                 })
-                                .cloned()
+                                .map(format_installed_decky_plugin)
                                 .collect();
                         installed_decky_plugins_not_configured.sort();
                         if !installed_decky_plugins_not_configured.is_empty() {
@@ -738,17 +766,26 @@ fn main() -> Result<()> {
                     {
                         let mut decky_plugin_state_mismatches = Vec::new();
                         for plugin in &decky.plugins {
-                            if !installed_decky_plugins.contains(plugin.name.as_str()) {
+                            let Some(installed_plugin) =
+                                installed_decky_plugins.iter().find(|installed_plugin| {
+                                    configured_decky_plugin_matches_installed(
+                                        plugin,
+                                        installed_plugin,
+                                    )
+                                })
+                            else {
                                 continue;
-                            }
+                            };
 
                             let system_plugin_disabled = system_decky_settings
                                 .disabled_plugins
-                                .contains(plugin.name.as_str());
+                                .contains(installed_plugin.name.as_str());
                             if plugin.disabled != system_plugin_disabled {
                                 decky_plugin_state_mismatches.push(format!(
                                     "{} -> config disabled = {}, system disabled = {}",
-                                    plugin.name, plugin.disabled, system_plugin_disabled,
+                                    format_configured_decky_plugin(plugin),
+                                    plugin.disabled,
+                                    system_plugin_disabled,
                                 ));
                             }
                         }

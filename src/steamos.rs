@@ -161,12 +161,19 @@ fn parse_decky_settings(settings: &str) -> Result<DeckySettings> {
     })
 }
 
-pub fn get_installed_decky_plugins() -> Result<HashSet<String>> {
+#[derive(Hash, PartialEq, Eq)]
+pub struct DeckyPlugin {
+    pub name: String,
+    pub directory_name: String,
+}
+
+pub fn get_installed_decky_plugins() -> Result<HashSet<DeckyPlugin>> {
     let home_dir: PathBuf = env::var("HOME")
         .context("HOME environment variable not set")?
         .into();
     let plugins_dir = home_dir.join("homebrew/plugins");
     let mut plugins = HashSet::new();
+    let mut seen_plugin_names = HashSet::new();
 
     for entry in fs::read_dir(&plugins_dir)
         .with_context(|| format!("Failed to read `{}`", plugins_dir.display()))?
@@ -187,9 +194,16 @@ pub fn get_installed_decky_plugins() -> Result<HashSet<String>> {
             .with_context(|| format!("Failed to read `{}`", plugin_json_path.display()))?;
         let plugin_name = parse_decky_plugin_manifest(&plugin_json)
             .with_context(|| format!("Failed to parse `{}`", plugin_json_path.display()))?;
-        if !plugins.insert(plugin_name.clone()) {
+        let plugin = DeckyPlugin {
+            name: plugin_name.clone(),
+            directory_name: entry.file_name().into_string().map_err(|entry_name| {
+                anyhow!("found non-UTF-8 plugin directory name `{:?}`", entry_name)
+            })?,
+        };
+        if !seen_plugin_names.insert(plugin_name.clone()) {
             bail!("found duplicate plugin name `{plugin_name}`");
         }
+        plugins.insert(plugin);
     }
 
     Ok(plugins)
