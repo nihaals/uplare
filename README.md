@@ -1,6 +1,6 @@
 # Uplare
 
-Easily and accurately keep track of installed software.
+A CLI to easily and accurately keep track of installed software.
 
 ## Installation
 
