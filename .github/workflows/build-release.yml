@@ -63,8 +63,15 @@ jobs:
           if-no-files-found: error
 
   rust-test:
-    runs-on: ubuntu-latest
-    name: Test Rust CLI
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runs-on: ubuntu-latest
+            all-tests: true
+          - runs-on: macos-latest
+    runs-on: ${{ matrix.runs-on }}
+    name: Test Rust CLI - ${{ matrix.runs-on }}
     steps:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
@@ -78,14 +85,17 @@ jobs:
         continue-on-error: true
         run: cargo test
       - name: Check formatting
+        if: matrix.all-tests
         id: cargo-fmt
         continue-on-error: true
         run: cargo fmt -- --check
       - name: Check clippy
+        if: matrix.all-tests
         id: cargo-clippy
         continue-on-error: true
         run: cargo clippy -- -D warnings
       - name: Run publish dry run
+        if: matrix.all-tests
         id: cargo-publish
         continue-on-error: true
         run: cargo publish --dry-run
