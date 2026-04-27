@@ -421,6 +421,7 @@ mod tests {
         let mut symlinks = Vec::new();
         let mut warnings = Vec::new();
         get_symlinks(&root, &mut symlinks, &mut warnings).unwrap();
+        symlinks.sort();
         assert_eq!(symlinks, [root.join("dir/b.txt"), root.join("dir/c")]);
         assert_eq!(
             warnings,
