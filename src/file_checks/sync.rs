@@ -138,6 +138,10 @@ pub struct FileSyncReport {
 
 pub fn sync_sync_file_checks(file_checks: &[FileCheck], root: &Path) -> Result<FileSyncReport> {
     let sync_entries = build_sync_entries(file_checks, root)?;
+    if sync_entries.is_empty() {
+        bail!("no sync file checks configured");
+    }
+
     let target_symlink_paths: HashSet<&Path> = sync_entries
         .iter()
         .map(|entry| entry.sync_root_path.as_path())
