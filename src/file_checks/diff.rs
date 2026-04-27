@@ -230,12 +230,22 @@ fn file_equals_structure(
     }
 }
 
+fn mismatch_value(expected: JsonValue, actual: JsonValue) -> JsonValue {
+    JsonValue::Object(Map::from_iter([
+        ("expected".to_owned(), expected),
+        ("actual".to_owned(), actual),
+    ]))
+}
+
 fn find_mismatched_keys(
     expected: &Map<String, JsonValue>,
     actual: &JsonValue,
 ) -> Option<JsonValue> {
     let Some(actual_object) = actual.as_object() else {
-        return Some(JsonValue::Object(expected.clone()));
+        return Some(mismatch_value(
+            JsonValue::Object(expected.clone()),
+            actual.clone(),
+        ));
     };
 
     let mut mismatches = Map::new();
@@ -248,7 +258,13 @@ fn find_mismatched_keys(
             }
             (_, Some(actual_value)) if actual_value == expected_value => {}
             _ => {
-                mismatches.insert(key.clone(), expected_value.clone());
+                mismatches.insert(
+                    key.clone(),
+                    mismatch_value(
+                        expected_value.clone(),
+                        actual_object.get(key).cloned().unwrap_or(JsonValue::Null),
+                    ),
+                );
             }
         }
     }
@@ -392,9 +408,37 @@ mod tests {
             find_mismatched_keys(expected.as_object().unwrap(), &actual),
             Some(json!({
                 "nested": {
-                    "c": 1,
-                    "d": 2,
+                    "c": {
+                        "expected": 1,
+                        "actual": 9,
+                    },
+                    "d": {
+                        "expected": 2,
+                        "actual": null,
+                    },
                 },
+            })),
+        );
+    }
+
+    #[test]
+    fn test_find_mismatched_keys_actual_not_object() {
+        let expected = json!({
+            "nested": {
+                "c": 1,
+            },
+        });
+        let actual = json!(9);
+
+        assert_eq!(
+            find_mismatched_keys(expected.as_object().unwrap(), &actual),
+            Some(json!({
+                "expected": {
+                    "nested": {
+                        "c": 1,
+                    },
+                },
+                "actual": 9,
             })),
         );
     }
