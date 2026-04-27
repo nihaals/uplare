@@ -53,5 +53,7 @@ class TestFlightApp extends BaseMacApp {
 
 output {
   value = mac
-  renderer = new JsonRenderer {}
+  renderer = new JsonRenderer {
+    omitNullProperties = false
+  }
 }

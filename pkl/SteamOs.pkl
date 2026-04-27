@@ -58,5 +58,7 @@ class DeckyPlugin {
 
 output {
   value = steamOs
-  renderer = new JsonRenderer {}
+  renderer = new JsonRenderer {
+    omitNullProperties = false
+  }
 }
