@@ -1,0 +1,82 @@
+amends "pkl:test"
+
+import "../FileCheck.pkl"
+
+local function noConstraintViolation(value: Any): Boolean =
+  module.catchOrNull(() -> value.toString()) == null
+local function constraintViolation(value: Any): Boolean =
+  module.catchOrNull(() -> value.toString())?.startsWith("Type constraint ") ?? false
+
+facts {
+  // -- file paths --
+
+  ["allows valid file paths"] {
+    noConstraintViolation(new FileCheck.FileExists {
+      path = "/etc/hosts"
+    })
+    noConstraintViolation(new FileCheck.FileExists {
+      path = "~/.ssh/config"
+    })
+    noConstraintViolation(new FileCheck.FileExists {
+      path = "/userhome/.ssh/config"
+    })
+  }
+  ["disallows invalid file paths"] {
+    constraintViolation(new FileCheck.FileExists {
+      path = "etc/hosts"
+    })
+    constraintViolation(new FileCheck.FileExists {
+      path = "/etc/hosts/"
+    })
+  }
+
+  // -- directory paths --
+
+  ["allows valid directory paths"] {
+    noConstraintViolation(new FileCheck.DirectoryExists {
+      path = "/etc/"
+    })
+    noConstraintViolation(new FileCheck.DirectoryExists {
+      path = "~/.config/"
+    })
+    noConstraintViolation(new FileCheck.DirectoryExists {
+      path = "/userhome/.config/"
+    })
+  }
+  ["disallows invalid directory paths"] {
+    constraintViolation(new FileCheck.DirectoryExists {
+      path = "etc/"
+    })
+    constraintViolation(new FileCheck.DirectoryExists {
+      path = "/etc"
+    })
+  }
+
+  // -- sync paths --
+
+  ["allows sync paths outside userhome prefix"] {
+    noConstraintViolation(new FileCheck.FileSync {
+      path = "/app/db.sqlite"
+    })
+    noConstraintViolation(new FileCheck.DirectorySync {
+      path = "~/.config/app/"
+    })
+  }
+  ["disallows sync paths using userhome prefix"] {
+    constraintViolation(new FileCheck.FileSync {
+      path = "/userhome/db.sqlite"
+    })
+    constraintViolation(new FileCheck.DirectorySync {
+      path = "/UserHome/app/"
+    })
+  }
+
+  // -- string checks --
+
+  ["disallows empty contains string substring"] {
+    constraintViolation(new FileCheck.FileContainsString {
+      path = "/etc/hosts"
+      substring = ""
+    })
+  }
+}

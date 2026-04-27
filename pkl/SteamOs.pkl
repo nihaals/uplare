@@ -1,5 +1,7 @@
 module uplare.SteamOs
 
+import "FileCheck.pkl"
+
 steamOs: SteamOs
 class SteamOs {
   hostname: String(isNotEmpty)
@@ -15,6 +17,7 @@ class SteamOs {
   desktop: Listing<String>?(this == null || (isNotEmpty && isDistinct)) = null
   /// An exhaustive ordered list of applications or `null` to not check. Must match KDE Plasma's `launchers` format.
   kdePlasmaDock: Listing<String>?(this == null || (isNotEmpty && isDistinct)) = null
+  files: Listing<FileCheck.FileCheck>(isDistinctBy((fileCheck) -> fileCheck.path)) = new {}
 }
 
 class SteamOsSettings {

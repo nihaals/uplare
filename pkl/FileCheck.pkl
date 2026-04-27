@@ -1,0 +1,68 @@
+typealias FileCheck =
+  FileExists
+    | DirectoryExists
+    | FileSync
+    | DirectorySync
+    | FileEqualsString
+    | FileContainsString
+    | FileEqualsJson
+    | FileMatchesJson
+    | FileEqualsYaml
+    | FileMatchesYaml
+
+abstract local class FileCheckBase {
+  fixed type: String = getClass().simpleName
+}
+
+local typealias FilePath = String((startsWith("/") || startsWith("~/")) && !endsWith("/"))
+local typealias DirectoryPath = String((startsWith("/") || startsWith("~/")) && endsWith("/"))
+
+class FileExists extends FileCheckBase {
+  path: FilePath
+}
+
+class DirectoryExists extends FileCheckBase {
+  path: DirectoryPath
+}
+
+local const homeSyncPrefix = "/userhome/"
+class FileSync extends FileCheckBase {
+  path: FilePath(!toLowerCase().startsWith(homeSyncPrefix))
+}
+
+class DirectorySync extends FileCheckBase {
+  path: DirectoryPath(!toLowerCase().startsWith(homeSyncPrefix))
+}
+
+class FileEqualsString extends FileCheckBase {
+  path: FilePath
+  contents: String
+}
+
+class FileContainsString extends FileCheckBase {
+  path: FilePath
+  substring: String(isNotEmpty)
+}
+
+local typealias Json = Mapping<String, Any> | Listing<Any> | String | Number | Boolean | Null
+local typealias JsonMatch = Mapping<String, Json>
+
+class FileEqualsJson extends FileCheckBase {
+  path: FilePath
+  json: Json
+}
+
+class FileMatchesJson extends FileCheckBase {
+  path: FilePath
+  json: JsonMatch
+}
+
+class FileEqualsYaml extends FileCheckBase {
+  path: FilePath
+  yaml: Json
+}
+
+class FileMatchesYaml extends FileCheckBase {
+  path: FilePath
+  yaml: JsonMatch
+}

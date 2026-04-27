@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::{borrow::Cow, collections::HashSet};
 use validator::{Validate, ValidationError};
 
+use crate::pkl_types::file_check::{FileCheck, validate_distinct_file_check_paths};
+
 #[derive(Deserialize, Serialize, Validate)]
 #[serde(rename_all = "camelCase")]
 pub struct SteamOsConfig {
@@ -25,6 +27,8 @@ pub struct SteamOsConfig {
     /// An exhaustive ordered list of applications or `None` to not check. Must match KDE Plasma's `launchers` format.
     #[validate(custom(function = "validate_non_empty_distinct_strings"))]
     pub kde_plasma_dock: Option<Vec<String>>,
+    #[validate(nested, custom(function = "validate_distinct_file_check_paths"))]
+    pub files: Vec<FileCheck>,
 }
 
 #[derive(Deserialize, Serialize, Validate)]
@@ -161,6 +165,7 @@ fn validate_distinct_plugins(plugins: &Vec<DeckyPlugin>) -> Result<(), Validatio
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::pkl_types::file_check::{DirectoryExists, FileEqualsString, FileExists};
 
     fn no_constraint_violation(value: &impl Validate) -> bool {
         value.validate().is_ok()
@@ -216,6 +221,7 @@ mod tests {
             enabled_systemd_units: vec![],
             desktop: None,
             kde_plasma_dock: None,
+            files: vec![],
         }
     }
 
@@ -310,6 +316,37 @@ mod tests {
     fn disallows_duplicate_kde_plasma_dock_entries() {
         let mut config = steamos();
         config.kde_plasma_dock = Some(strings(&["Return.desktop", "Return.desktop"]));
+        assert!(constraint_violation(&config));
+    }
+
+    // -- files --
+
+    #[test]
+    fn allows_distinct_file_checks() {
+        let mut config = steamos();
+        config.files = vec![
+            FileCheck::FileExists(FileExists {
+                path: "/etc/hosts".to_owned(),
+            }),
+            FileCheck::DirectoryExists(DirectoryExists {
+                path: "/etc/".to_owned(),
+            }),
+        ];
+        assert!(no_constraint_violation(&config));
+    }
+
+    #[test]
+    fn disallows_duplicate_file_check_paths() {
+        let mut config = steamos();
+        config.files = vec![
+            FileCheck::FileExists(FileExists {
+                path: "/etc/hosts".to_owned(),
+            }),
+            FileCheck::FileEqualsString(FileEqualsString {
+                path: "/etc/hosts".to_owned(),
+                contents: "127.0.0.1 localhost\n".to_owned(),
+            }),
+        ];
         assert!(constraint_violation(&config));
     }
 

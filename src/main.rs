@@ -1,3 +1,4 @@
+mod file_checks;
 mod macos;
 mod pkl_types;
 mod steamos;
@@ -32,6 +33,12 @@ enum Commands {
         command: DiffCommands,
     },
 
+    /// Mirror configured sync file checks into a local directory of symlinks
+    FileSync {
+        #[command(subcommand)]
+        command: FileSyncCommands,
+    },
+
     /// Generate shell completions
     Completions {
         /// The shell to generate the completions for
@@ -52,6 +59,20 @@ enum DiffCommands {
     /// SteamOS
     #[command(name = "steamos")]
     SteamOs {
+        /// System configuration file to compare against
+        system_config: PathBuf,
+    },
+}
+
+#[derive(Subcommand)]
+enum FileSyncCommands {
+    /// SteamOS
+    #[command(name = "steamos")]
+    SteamOs {
+        /// Output directory that will contain the mirrored symlinks
+        #[arg(short = 'o', long = "root")]
+        root: PathBuf,
+
         /// System configuration file to compare against
         system_config: PathBuf,
     },
@@ -139,6 +160,14 @@ fn print_sections(sections: Vec<(&str, Vec<String>)>) {
         }
         println!();
     }
+}
+
+fn read_steamos_config(system_config: PathBuf) -> Result<pkl_types::steamos::SteamOsConfig> {
+    let config = fs::read_to_string(system_config)?;
+    let config = serde_json::from_str::<pkl_types::steamos::SteamOsConfig>(&config)
+        .context("Failed to read system config")?;
+    config.validate().context("Invalid system config")?;
+    Ok(config)
 }
 
 fn main() -> Result<()> {
@@ -512,10 +541,7 @@ fn main() -> Result<()> {
                 print_sections(sections);
             }
             DiffCommands::SteamOs { system_config } => {
-                let config = fs::read_to_string(system_config)?;
-                let config = serde_json::from_str::<pkl_types::steamos::SteamOsConfig>(&config)
-                    .context("Failed to read system config")?;
-                config.validate().context("Invalid system config")?;
+                let config = read_steamos_config(system_config)?;
 
                 let system_hostname = steamos::get_hostname()?;
                 let system_charge_limit = steamos::get_charge_limit()?.unwrap_or(100);
@@ -872,7 +898,36 @@ fn main() -> Result<()> {
                     }
                 }
 
+                {
+                    let file_check_mismatches = file_checks::diff_file_checks(&config.files)?;
+                    if !file_check_mismatches.is_empty() {
+                        sections.push(("File checks mismatch", file_check_mismatches));
+                    }
+                }
+
                 print_sections(sections);
+            }
+        },
+        Commands::FileSync { command } => match command {
+            FileSyncCommands::SteamOs {
+                root,
+                system_config,
+            } => {
+                let config = read_steamos_config(system_config)?;
+                let report = file_checks::sync_sync_file_checks(&config.files, &root)?;
+                for deleted in report.deleted {
+                    println!("Deleted {}", deleted.display());
+                }
+                for (symlink_path, symlink_target) in report.created {
+                    println!(
+                        "Created {} -> {}",
+                        symlink_path.display(),
+                        symlink_target.display(),
+                    );
+                }
+                for warning in report.warnings {
+                    eprintln!("Warning: {}", warning);
+                }
             }
         },
         Commands::Completions { shell } => {

@@ -1,5 +1,6 @@
 amends "pkl:test"
 
+import "../FileCheck.pkl"
 import "../SteamOs.pkl"
 
 local function noConstraintViolation(value: Any): Boolean =
@@ -194,6 +195,44 @@ facts {
       kdePlasmaDock = new Listing {
         "Return.desktop"
         "Return.desktop"
+      }
+    })
+  }
+
+  // -- files --
+
+  ["allows distinct file checks"] {
+    noConstraintViolation(new SteamOs.SteamOs {
+      hostname = "test"
+      steamOsSettings {}
+      steamSettings {
+        twentyFourHourClock = true
+      }
+      files {
+        new FileCheck.FileExists {
+          path = "/etc/hosts"
+        }
+        new FileCheck.DirectoryExists {
+          path = "/etc/"
+        }
+      }
+    })
+  }
+  ["disallows duplicate file check paths"] {
+    constraintViolation(new SteamOs.SteamOs {
+      hostname = "test"
+      steamOsSettings {}
+      steamSettings {
+        twentyFourHourClock = true
+      }
+      files {
+        new FileCheck.FileExists {
+          path = "/etc/hosts"
+        }
+        new FileCheck.FileEqualsString {
+          path = "/etc/hosts"
+          contents = "127.0.0.1 localhost\n"
+        }
       }
     })
   }
