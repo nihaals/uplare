@@ -332,6 +332,27 @@ mod tests {
     }
 
     #[test]
+    fn test_ensure_sync_entry_paths_do_not_overlap_overlap_two_dots_directory_equal() {
+        let result = ensure_sync_entry_paths_do_not_overlap(
+            Path::new("/root/"),
+            &[sync_entry("/source/../source/a/"), sync_entry("/source/a/")],
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_ensure_sync_entry_paths_do_not_overlap_overlap_two_dots_file_equal() {
+        let result = ensure_sync_entry_paths_do_not_overlap(
+            Path::new("/root/"),
+            &[
+                sync_entry("/source/a/file.txt"),
+                sync_entry("/source/../source/a/file.txt"),
+            ],
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn test_ensure_sync_entry_paths_do_not_overlap_exactly_root() {
         let result = ensure_sync_entry_paths_do_not_overlap(
             Path::new("/root/"),

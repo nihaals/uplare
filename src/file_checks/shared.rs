@@ -141,4 +141,22 @@ mod tests {
         ]);
         assert!(result.is_err());
     }
+
+    #[test]
+    fn test_ensure_paths_do_not_overlap_overlap_two_dots_directory_equal() {
+        let result = ensure_paths_do_not_overlap(&[
+            Path::new("/source/../source/a/"),
+            Path::new("/source/a/"),
+        ]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_ensure_paths_do_not_overlap_overlap_two_dots_file_equal() {
+        let result = ensure_paths_do_not_overlap(&[
+            Path::new("/source/a/file.txt"),
+            Path::new("/source/../source/a/file.txt"),
+        ]);
+        assert!(result.is_err());
+    }
 }
