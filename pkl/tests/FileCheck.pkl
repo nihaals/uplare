@@ -6,6 +6,8 @@ local function noConstraintViolation(value: Any): Boolean =
   module.catchOrNull(() -> value.toString()) == null
 local function constraintViolation(value: Any): Boolean =
   module.catchOrNull(() -> value.toString())?.startsWith("Type constraint ") ?? false
+local function typeMismatch(value: Function0<Any>): Boolean =
+  module.catchOrNull(() -> value.apply().toString())?.startsWith("Expected value of type ") ?? false
 
 facts {
   // -- file paths --
@@ -93,6 +95,19 @@ facts {
         "127.0.0.1"
         "127.0.0.1"
       }
+    })
+  }
+
+  // -- match checks --
+
+  ["disallows non-object match values"] {
+    typeMismatch(() -> new FileCheck.FileMatchesJson {
+      path = "/etc/test.json"
+      json = new Listing {}
+    })
+    typeMismatch(() -> new FileCheck.FileMatchesYaml {
+      path = "/etc/test.yaml"
+      yaml = true
     })
   }
 }
