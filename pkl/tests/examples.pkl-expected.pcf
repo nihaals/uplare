@@ -92,6 +92,8 @@ examples {
         ]
       },
       "enabledSystemdUnits": [],
+      "desktop": null,
+      "kdePlasmaDock": null,
       "files": []
     }
     
@@ -124,10 +126,12 @@ examples {
         "plugins": [
           {
             "name": "Brightness Bar",
+            "directoryName": null,
             "disabled": false
           },
           {
             "name": "HLTB for Deck",
+            "directoryName": null,
             "disabled": true
           }
         ]
