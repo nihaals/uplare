@@ -54,7 +54,7 @@ examples {
     
     """
   }
-  ["steamos-files-extra-constraints"] {
+  ["steamos-extra-constraints-files-helper"] {
     #"""
     {
       "hostname": "my-device",
