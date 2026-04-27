@@ -54,8 +54,8 @@ examples {
     
     """
   }
-  ["steamos-extra-constraints"] {
-    """
+  ["steamos-files-extra-constraints"] {
+    #"""
     {
       "hostname": "my-device",
       "steamOsSettings": {
@@ -85,8 +85,8 @@ examples {
             "disabled": false
           },
           {
-            "name": "HLTB for Deck",
-            "directoryName": "hltb-for-deck",
+            "name": "PlayTime",
+            "directoryName": "SDH-PlayTime",
             "disabled": true
           }
         ]
@@ -94,10 +94,20 @@ examples {
       "enabledSystemdUnits": [],
       "desktop": null,
       "kdePlasmaDock": null,
-      "files": []
+      "files": [
+        {
+          "type": "FileEqualsString",
+          "path": "~/.ssh/authorized_keys",
+          "contents": "ssh-ed25519 ...\n"
+        },
+        {
+          "type": "FileSync",
+          "path": "~/homebrew/data/SDH-PlayTime/storage.db"
+        }
+      ]
     }
     
-    """
+    """#
   }
   ["steamos"] {
     """

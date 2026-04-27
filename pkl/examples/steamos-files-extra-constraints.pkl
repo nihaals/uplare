@@ -1,0 +1,65 @@
+amends "../SteamOs.pkl"
+import "../FileCheck.pkl"
+
+local class FileEqualsString {
+  path: String
+  contents: String(!trailingNewline || !endsWith("\n"))
+  /// If `true`, [contents] must not end with a newline and one will be appended.
+  trailingNewline: Boolean = true
+  fixed fileCheck = new FileCheck.FileEqualsString {
+    path = outer.path
+    contents = if (trailingNewline) outer.contents + "\n" else outer.contents
+  }
+}
+
+steamOs {
+  hostname = "my-device"
+  steamOsSettings {}
+  steamSettings {
+    twentyFourHourClock = true
+  }
+  installedFlatpaks {
+    "org.mozilla.firefox"
+    "com.github.Matoking.protontricks"
+  }
+  decky = new Decky {
+    settings {}
+    local plugins: Listing<DeckyPlugin(directoryName != null)>(
+      toList().sortBy((plugin) -> plugin.name) == toList(),
+    ) = new {
+      new {
+        name = "Brightness Bar"
+        directoryName = "decky-brightness-bar"
+      }
+      new {
+        name = "PlayTime"
+        directoryName = "SDH-PlayTime"
+        disabled = true
+      }
+    }
+    plugins = plugins
+  }
+  local files: Listing = new {
+    local function getPluginDirectory(pluginName: String): String =
+      decky.plugins.toList().find((plugin) -> plugin.name == pluginName).directoryName!!
+    local function dataDirectory(pluginName: String): String =
+      "~/homebrew/data/\(getPluginDirectory(pluginName))"
+
+    new FileEqualsString {
+      path = "~/.ssh/authorized_keys"
+      contents =
+        """
+        ssh-ed25519 ...
+        """
+    }
+    new FileCheck.FileSync {
+      local dataDirectory = dataDirectory("PlayTime")
+      path = "\(dataDirectory)/storage.db"
+    }
+  }
+  files =
+    files
+      .toList()
+      .map((fileCheck) -> if (fileCheck is FileCheck.FileCheck) fileCheck else fileCheck.fileCheck)
+      .toListing()
+}
