@@ -183,7 +183,7 @@ fn validate_macos_config(config: &MacOsConfig) -> Result<(), ValidationError> {
 
 fn is_valid_mac_app_path(app_path: &str) -> bool {
     (app_path.starts_with("/Applications/") || app_path.starts_with("~/Applications/"))
-        && !app_path.ends_with('/')
+        && app_path.ends_with(".app")
 }
 
 fn is_valid_cask_name(cask_name: &str) -> bool {
@@ -266,6 +266,22 @@ mod tests {
     }
 
     // -- App path validation (BaseMacOsApp) --
+
+    #[test]
+    fn allows_valid_app_path() {
+        assert!(no_constraint_violation(&cask(
+            "visual-studio-code",
+            &["/Applications/Visual Studio Code.app"]
+        )));
+    }
+
+    #[test]
+    fn disallows_zip_in_app_path() {
+        assert!(constraint_violation(&cask(
+            "visual-studio-code",
+            &["/Applications/Visual Studio Code.zip"]
+        )));
+    }
 
     #[test]
     fn disallows_trailing_slash_in_app_path() {

@@ -17,7 +17,7 @@ class MacOs {
 
 typealias MacApp = ManualApp | HomebrewCask | MacAppStoreApp | TestFlightApp
 typealias MacAppPath =
-  String((startsWith("/Applications/") || startsWith("~/Applications/")) && !endsWith("/"))
+  String((startsWith("/Applications/") || startsWith("~/Applications/")) && endsWith(".app"))
 
 /// If [bool] is `false` then [listing] must not contain any item with class [`class`].
 local const function ifFalseExcludesClass(bool: Boolean, `class`: Class, listing: Listing<Any>) =

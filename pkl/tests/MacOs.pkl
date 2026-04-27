@@ -10,6 +10,22 @@ local function constraintViolation(value: Any): Boolean =
 facts {
   // -- App path validation (BaseMacApp) --
 
+  ["allows valid app path"] {
+    noConstraintViolation(new MacOs.HomebrewCask {
+      caskName = "visual-studio-code"
+      appPaths {
+        "/Applications/Visual Studio Code.app"
+      }
+    })
+  }
+  ["disallows zip in app path"] {
+    constraintViolation(new MacOs.HomebrewCask {
+      caskName = "visual-studio-code"
+      appPaths {
+        "/Applications/Visual Studio Code.zip"
+      }
+    })
+  }
   ["disallows trailing slash in app path"] {
     constraintViolation(new MacOs.HomebrewCask {
       caskName = "visual-studio-code"
