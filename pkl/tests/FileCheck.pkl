@@ -73,10 +73,26 @@ facts {
 
   // -- string checks --
 
-  ["disallows empty contains string substring"] {
-    constraintViolation(new FileCheck.FileContainsString {
+  ["disallows empty contains string substrings"] {
+    constraintViolation(new FileCheck.FileContainsStrings {
       path = "/etc/hosts"
-      substring = ""
+      substrings = new {}
+    })
+
+    constraintViolation(new FileCheck.FileContainsStrings {
+      path = "/etc/hosts"
+      substrings = new {
+        ""
+      }
+    })
+  }
+  ["disallows duplicate contains string substrings"] {
+    constraintViolation(new FileCheck.FileContainsStrings {
+      path = "/etc/hosts"
+      substrings = new {
+        "127.0.0.1"
+        "127.0.0.1"
+      }
     })
   }
 }

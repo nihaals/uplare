@@ -11,7 +11,7 @@ pub enum FileCheck {
     FileSync(FileSync),
     DirectorySync(DirectorySync),
     FileEqualsString(FileEqualsString),
-    FileContainsString(FileContainsString),
+    FileContainsStrings(FileContainsStrings),
     FileEqualsJson(FileEqualsJson),
     FileMatchesJson(FileMatchesJson),
     FileEqualsYaml(FileEqualsYaml),
@@ -62,11 +62,11 @@ pub struct FileEqualsString {
 
 #[derive(Debug, Clone, Deserialize, Serialize, Validate)]
 #[serde(rename_all = "camelCase")]
-pub struct FileContainsString {
+pub struct FileContainsStrings {
     #[validate(custom(function = "validate_file_path"))]
     pub path: String,
-    #[validate(length(min = 1))]
-    pub substring: String,
+    #[validate(custom(function = "validate_non_empty_distinct_strings"))]
+    pub substrings: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Validate)]
@@ -111,7 +111,7 @@ impl FileCheck {
             Self::FileSync(check) => &check.path,
             Self::DirectorySync(check) => &check.path,
             Self::FileEqualsString(check) => &check.path,
-            Self::FileContainsString(check) => &check.path,
+            Self::FileContainsStrings(check) => &check.path,
             Self::FileEqualsJson(check) => &check.path,
             Self::FileMatchesJson(check) => &check.path,
             Self::FileEqualsYaml(check) => &check.path,
@@ -136,7 +136,7 @@ impl Validate for FileCheck {
             Self::FileSync(check) => check.validate(),
             Self::DirectorySync(check) => check.validate(),
             Self::FileEqualsString(check) => check.validate(),
-            Self::FileContainsString(check) => check.validate(),
+            Self::FileContainsStrings(check) => check.validate(),
             Self::FileEqualsJson(check) => check.validate(),
             Self::FileMatchesJson(check) => check.validate(),
             Self::FileEqualsYaml(check) => check.validate(),
@@ -206,6 +206,26 @@ fn validate_match_object(value: &Value) -> Result<(), ValidationError> {
     }
 
     Err(ValidationError::new("match_requires_object"))
+}
+
+fn validate_non_empty_distinct_strings(values: &Vec<String>) -> Result<(), ValidationError> {
+    if values.is_empty() {
+        return Err(ValidationError::new("empty_list"));
+    }
+
+    let mut seen = HashSet::new();
+    for value in values {
+        if value.is_empty() {
+            return Err(ValidationError::new("empty_string"));
+        }
+        if !seen.insert(value.as_str()) {
+            let mut error = ValidationError::new("duplicate_value");
+            error.add_param(Cow::from("value"), &value.clone());
+            return Err(error);
+        }
+    }
+
+    Ok(())
 }
 
 fn is_valid_file_path(path: &str) -> bool {
@@ -286,10 +306,23 @@ mod tests {
     }
 
     #[test]
-    fn disallows_empty_contains_substring() {
-        assert!(constraint_violation(&FileContainsString {
+    fn disallows_empty_contains_substrings() {
+        assert!(constraint_violation(&FileContainsStrings {
             path: "/etc/hosts".to_owned(),
-            substring: String::new(),
+            substrings: Vec::new(),
+        }));
+
+        assert!(constraint_violation(&FileContainsStrings {
+            path: "/etc/hosts".to_owned(),
+            substrings: vec![String::new()],
+        }));
+    }
+
+    #[test]
+    fn disallows_duplicate_contains_substrings() {
+        assert!(constraint_violation(&FileContainsStrings {
+            path: "/etc/hosts".to_owned(),
+            substrings: vec!["127.0.0.1".to_owned(), "127.0.0.1".to_owned()],
         }));
     }
 

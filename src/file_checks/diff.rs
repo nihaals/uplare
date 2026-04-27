@@ -4,6 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use aho_corasick::AhoCorasick;
 use anyhow::{Context, Result, bail};
 use serde_json::{Map, Value as JsonValue};
 
@@ -42,7 +43,7 @@ fn file_equals_string(path: &Path, expected: &str) -> Result<Option<String>> {
     )))
 }
 
-fn file_contains_string(path: &Path, substring: &str) -> Result<Option<String>> {
+fn file_contains_strings(path: &Path, substrings: &[String]) -> Result<Option<String>> {
     if !path.is_file() {
         return Ok(Some(format!("{} -> file does not exist", path.display())));
     }
@@ -58,50 +59,74 @@ fn file_contains_string(path: &Path, substring: &str) -> Result<Option<String>> 
         }
     };
 
-    let contains = reader_contains_bytes(file, substring.as_bytes(), SUBSTRING_SEARCH_CHUNK_SIZE)
+    let missing_substrings = reader_missing_strings(file, substrings, SUBSTRING_SEARCH_CHUNK_SIZE)
         .with_context(|| format!("Failed to read `{}`", path.display()))?;
-    if contains {
+
+    if missing_substrings.is_empty() {
         Ok(None)
     } else {
         Ok(Some(format!(
             "{} -> file does not contain {}",
             path.display(),
-            serde_json::to_string(substring).expect("string should serialize to JSON"),
+            serde_json::to_string(&missing_substrings).expect("strings should serialize to JSON"),
         )))
     }
 }
 
-fn contains_bytes(haystack: &[u8], needle: &[u8]) -> bool {
-    haystack
-        .windows(needle.len())
-        .any(|window| window == needle)
-}
+fn reader_missing_strings<R: Read>(
+    mut reader: R,
+    substrings: &[String],
+    chunk_size: usize,
+) -> Result<Vec<String>> {
+    if substrings.is_empty() {
+        return Ok(Vec::new());
+    }
 
-fn reader_contains_bytes<R: Read>(mut reader: R, needle: &[u8], chunk_size: usize) -> Result<bool> {
-    let mut chunk = vec![0; chunk_size.max(needle.len())];
+    let max_substring_len = substrings.iter().map(String::len).max().unwrap_or(0);
+    let matcher = AhoCorasick::new(substrings).context("Failed to build substring matcher")?;
+    let mut found = vec![false; substrings.len()];
+    let mut remaining = substrings.len();
+    let mut chunk = vec![0; chunk_size.max(max_substring_len)];
     let mut tail = Vec::new();
+    let mut window = Vec::with_capacity(chunk.len() + max_substring_len.saturating_sub(1));
 
     loop {
         let bytes_read = reader.read(&mut chunk).context("Failed to read chunk")?;
         if bytes_read == 0 {
-            return Ok(false);
+            break;
         }
 
-        let mut window = Vec::with_capacity(tail.len() + bytes_read);
+        window.clear();
         window.extend_from_slice(&tail);
         window.extend_from_slice(&chunk[..bytes_read]);
 
-        if contains_bytes(&window, needle) {
-            return Ok(true);
+        for mat in matcher.find_overlapping_iter(&window) {
+            let pattern_index = mat.pattern().as_usize();
+            if found[pattern_index] {
+                continue;
+            }
+
+            found[pattern_index] = true;
+            remaining -= 1;
+            if remaining == 0 {
+                return Ok(Vec::new());
+            }
         }
 
-        let overlap = needle.len().saturating_sub(1);
+        let overlap = max_substring_len.saturating_sub(1);
         tail.clear();
         if overlap != 0 {
             let start = window.len().saturating_sub(overlap);
             tail.extend_from_slice(&window[start..]);
         }
     }
+
+    Ok(substrings
+        .iter()
+        .enumerate()
+        .filter(|(index, _)| !found[*index])
+        .map(|(_, substring)| substring.clone())
+        .collect())
 }
 
 #[derive(Clone, Copy)]
@@ -305,7 +330,7 @@ fn diff_file_check(file_check: &FileCheck) -> Result<Option<String>> {
             }
         }
         FileCheck::FileEqualsString(check) => file_equals_string(&path, &check.contents),
-        FileCheck::FileContainsString(check) => file_contains_string(&path, &check.substring),
+        FileCheck::FileContainsStrings(check) => file_contains_strings(&path, &check.substrings),
         FileCheck::FileEqualsJson(check) => {
             file_equals_structure(&path, &check.json, StructuredFileFormat::Json)
         }
@@ -398,8 +423,20 @@ mod tests {
     }
 
     #[test]
-    fn test_reader_contains_bytes() {
+    fn test_reader_missing_strings() {
         let reader = io::Cursor::new(b"aaaaabbbbbccccc".to_vec());
-        assert!(reader_contains_bytes(reader, b"abbbbbc", 4).unwrap());
+        assert_eq!(
+            reader_missing_strings(
+                reader,
+                &[
+                    "abbbbbc".to_owned(),
+                    "bbbbbc".to_owned(),
+                    "missing".to_owned(),
+                ],
+                4,
+            )
+            .unwrap(),
+            vec!["missing".to_owned()],
+        );
     }
 }

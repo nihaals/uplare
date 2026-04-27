@@ -4,7 +4,7 @@ typealias FileCheck =
     | FileSync
     | DirectorySync
     | FileEqualsString
-    | FileContainsString
+    | FileContainsStrings
     | FileEqualsJson
     | FileMatchesJson
     | FileEqualsYaml
@@ -39,9 +39,9 @@ class FileEqualsString extends FileCheckBase {
   contents: String
 }
 
-class FileContainsString extends FileCheckBase {
+class FileContainsStrings extends FileCheckBase {
   path: FilePath
-  substring: String(isNotEmpty)
+  substrings: Listing<String(isNotEmpty)>(isNotEmpty && isDistinct)
 }
 
 local typealias Json = Mapping<String, Any> | Listing<Any> | String | Number | Boolean | Null

@@ -10,6 +10,7 @@ categories = ["command-line-utilities", "config", "filesystem"]
 include = ["/src/", "/LICENSE"]
 
 [dependencies]
+aho-corasick = "1"
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
 clap_complete_command = "0.6"
