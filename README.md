@@ -79,6 +79,8 @@ mac {
 ```pkl
 // Replace with version from `uplare --version`
 amends "package://github.com/nihaals/uplare/releases/download/v0.0.0/uplare-pkl@0.0.0#/SteamOs.pkl"
+// Optional, only needed if you use `files`
+import "package://github.com/nihaals/uplare/releases/download/v0.0.0/uplare-pkl@0.0.0#/FileCheck.pkl"
 
 steamOs {
   hostname = "my-device"
@@ -123,6 +125,15 @@ steamOs {
     "applications:org.kde.discover.desktop"
     "preferred://filemanager"
     "preferred://browser"
+  }
+  files {
+    new FileCheck.FileContainsStrings {
+      path = "/etc/hosts"
+      substrings = new {
+        "127.0.0.1"
+        "::1"
+      }
+    }
   }
 }
 ```

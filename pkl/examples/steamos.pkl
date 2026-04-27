@@ -1,4 +1,5 @@
 amends "../SteamOs.pkl"
+import "../FileCheck.pkl"
 
 steamOs {
   hostname = "my-device"
@@ -43,5 +44,14 @@ steamOs {
     "applications:org.kde.discover.desktop"
     "preferred://filemanager"
     "preferred://browser"
+  }
+  files {
+    new FileCheck.FileContainsStrings {
+      path = "/etc/hosts"
+      substrings = new {
+        "127.0.0.1"
+        "::1"
+      }
+    }
   }
 }

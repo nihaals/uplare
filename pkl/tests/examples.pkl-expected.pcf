@@ -160,7 +160,16 @@ examples {
         "preferred://filemanager",
         "preferred://browser"
       ],
-      "files": []
+      "files": [
+        {
+          "type": "FileContainsStrings",
+          "path": "/etc/hosts",
+          "substrings": [
+            "127.0.0.1",
+            "::1"
+          ]
+        }
+      ]
     }
     
     """
