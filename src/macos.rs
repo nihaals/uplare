@@ -184,6 +184,9 @@ fn add_potential_app(
     if !is_app_bundle(path) {
         return Ok(());
     }
+    if path == "/Applications/Utilities/Feedback Assistant.app" {
+        return Ok(());
+    }
 
     if let Some(home_dir) = home_dir {
         let relative_path = path
