@@ -184,7 +184,12 @@ fn add_potential_app(
     if !is_app_bundle(path) {
         return Ok(());
     }
-    if path == "/Applications/Utilities/Feedback Assistant.app" {
+    if [
+        "/Applications/Utilities/Feedback Assistant.app",
+        "/Applications/Safari.app",
+    ]
+    .contains(&path.to_str().context("App path is not valid UTF-8")?)
+    {
         return Ok(());
     }
 
