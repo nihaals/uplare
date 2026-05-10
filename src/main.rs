@@ -285,6 +285,15 @@ fn main() -> Result<()> {
                     .iter()
                     .map(|(cask_name, _)| *cask_name)
                     .collect();
+                let configured_non_app_casks: HashSet<&str> = config
+                    .homebrew
+                    .as_ref()
+                    .map(|homebrew| homebrew.non_app_casks.iter().map(String::as_str).collect())
+                    .unwrap_or_default();
+                let all_configured_casks: HashSet<&str> = configured_casks
+                    .union(&configured_non_app_casks)
+                    .copied()
+                    .collect();
                 let configured_app_store_ids: HashSet<u64> = configured_app_store_apps
                     .iter()
                     .map(|(app_store_id, _)| *app_store_id)
@@ -335,7 +344,7 @@ fn main() -> Result<()> {
                 }
 
                 {
-                    let mut configured_casks_not_installed: Vec<String> = configured_casks
+                    let mut configured_casks_not_installed: Vec<String> = all_configured_casks
                         .iter()
                         .filter(|&cask_name| !installed_casks.contains(*cask_name))
                         .map(|&s| s.to_owned())
@@ -352,7 +361,7 @@ fn main() -> Result<()> {
                 {
                     let mut installed_casks_not_configured: Vec<String> = installed_casks
                         .iter()
-                        .filter(|cask_name| !configured_casks.contains(cask_name.as_str()))
+                        .filter(|cask_name| !all_configured_casks.contains(cask_name.as_str()))
                         .cloned()
                         .collect();
                     installed_casks_not_configured.sort();

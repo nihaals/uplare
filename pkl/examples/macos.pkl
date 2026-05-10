@@ -1,7 +1,11 @@
 amends "../MacOs.pkl"
 
 mac {
-  homebrew = new Homebrew {}
+  homebrew = new Homebrew {
+    nonAppCasks {
+      "font-fira-code"
+    }
+  }
   apps {
     new ManualApp {
       name = "Wolfram"

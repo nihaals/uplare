@@ -2,7 +2,11 @@ examples {
   ["macos-custom-properties"] {
     """
     {
-      "homebrew": {},
+      "homebrew": {
+        "nonAppCasks": [
+          "font-fira-code"
+        ]
+      },
       "apps": [
         {
           "type": "ManualApp",
@@ -26,7 +30,11 @@ examples {
   ["macos"] {
     """
     {
-      "homebrew": {},
+      "homebrew": {
+        "nonAppCasks": [
+          "font-fira-code"
+        ]
+      },
       "apps": [
         {
           "type": "ManualApp",

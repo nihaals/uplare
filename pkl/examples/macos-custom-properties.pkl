@@ -41,6 +41,10 @@ local myApps: Listing<ExtendedManualApp | ExtendedCask> = new {
 }
 
 mac {
-  homebrew = new Homebrew {}
+  homebrew = new Homebrew {
+    nonAppCasks {
+      "font-fira-code"
+    }
+  }
   apps = myApps.toList().map((app) -> app.correct).toListing()
 }

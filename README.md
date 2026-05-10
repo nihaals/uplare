@@ -44,7 +44,11 @@ chmod +x uplare
 amends "package://github.com/nihaals/uplare/releases/download/v0.0.0/uplare-pkl@0.0.0#/MacOs.pkl"
 
 mac {
-  homebrew = new Homebrew {}
+  homebrew = new Homebrew {
+    nonAppCasks {
+      "font-fira-code"
+    }
+  }
   apps {
     new ManualApp {
       name = "Wolfram"

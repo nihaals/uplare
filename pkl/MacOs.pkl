@@ -7,7 +7,10 @@ class MacOs {
     isNotEmpty
       && ifFalseExcludesClass(homebrew != null, HomebrewCask, this)
       && toList().flatMap((app) -> app.appPaths.toList()).isDistinct
-      && toList().filterIsInstance(HomebrewCask).isDistinctBy((app) -> app.caskName)
+      && (
+        toList().filterIsInstance(HomebrewCask).map((app) -> app.caskName)
+          + (homebrew?.nonAppCasks?.toList() ?? List())
+      ).isDistinct
       && toList().filterIsInstance(MacAppStoreApp).isDistinctBy((app) -> app.appStoreId)
       && toList()
         .filter((app) -> app is ManualApp || app is TestFlightApp)
@@ -15,7 +18,10 @@ class MacOs {
   )
 }
 
-class Homebrew {}
+local const caskRegex = Regex(#"(?!.*--)(?!.*@.*@)[a-z0-9]([a-z0-9-@]*[a-z0-9])?"#)
+class Homebrew {
+  nonAppCasks: Listing<String(matches(caskRegex))>(isDistinct)
+}
 
 typealias MacApp = ManualApp | HomebrewCask | MacAppStoreApp | TestFlightApp
 typealias MacAppPath =
@@ -40,7 +46,7 @@ class ManualApp extends BaseMacApp {
 }
 
 class HomebrewCask extends BaseMacApp {
-  caskName: String(matches(Regex(#"(?!.*--)(?!.*@.*@)[a-z0-9]([a-z0-9-@]*[a-z0-9])?"#)))
+  caskName: String(matches(caskRegex))
 }
 
 class MacAppStoreApp extends BaseMacApp {

@@ -179,6 +179,37 @@ facts {
     })
   }
 
+  // -- Homebrew --
+
+  ["allows homebrew with no non-app casks"] {
+    noConstraintViolation(new MacOs.Homebrew {
+      nonAppCasks {}
+    })
+  }
+  ["allows homebrew with non-app casks"] {
+    noConstraintViolation(new MacOs.Homebrew {
+      nonAppCasks {
+        "font-fira-code"
+        "macfuse"
+      }
+    })
+  }
+  ["disallows invalid non-app cask name"] {
+    constraintViolation(new MacOs.Homebrew {
+      nonAppCasks {
+        "font-fira-code!"
+      }
+    })
+  }
+  ["disallows duplicate non-app cask names"] {
+    constraintViolation(new MacOs.Homebrew {
+      nonAppCasks {
+        "font-fira-code"
+        "font-fira-code"
+      }
+    })
+  }
+
   // -- MacAppStoreApp --
 
   ["disallows app store app with 0 app id"] {
@@ -383,6 +414,23 @@ facts {
           caskName = "visual-studio-code"
           appPaths {
             "/Applications/Visual Studio Code - Insiders.app"
+          }
+        }
+      }
+    })
+  }
+  ["disallows casks in both nonAppCasks and apps"] {
+    constraintViolation(new MacOs.MacOs {
+      homebrew = new MacOs.Homebrew {
+        nonAppCasks {
+          "visual-studio-code"
+        }
+      }
+      apps {
+        new MacOs.HomebrewCask {
+          caskName = "visual-studio-code"
+          appPaths {
+            "/Applications/Visual Studio Code.app"
           }
         }
       }

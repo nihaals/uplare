@@ -6,13 +6,18 @@ use validator::{Validate, ValidationError, ValidationErrors};
 #[serde(rename_all = "camelCase")]
 #[validate(schema(function = "validate_macos_config"))]
 pub struct MacOsConfig {
+    #[validate(nested)]
     pub homebrew: Option<Homebrew>,
     #[validate(length(min = 1), nested)]
     pub apps: Vec<MacOsApp>,
 }
 
-#[derive(Deserialize, Serialize)]
-pub struct Homebrew {}
+#[derive(Deserialize, Serialize, Validate)]
+#[serde(rename_all = "camelCase")]
+pub struct Homebrew {
+    #[validate(custom(function = "validate_cask_names"))]
+    pub non_app_casks: Vec<String>,
+}
 
 #[derive(Deserialize, Serialize)]
 #[serde(tag = "type")]
@@ -109,6 +114,19 @@ fn validate_cask_name(cask_name: &str) -> Result<(), ValidationError> {
     Err(error)
 }
 
+fn validate_cask_names(cask_names: &Vec<String>) -> Result<(), ValidationError> {
+    let mut seen = HashSet::new();
+    for cask_name in cask_names {
+        validate_cask_name(cask_name)?;
+        if !seen.insert(cask_name) {
+            let mut error = ValidationError::new("duplicate_cask_name");
+            error.add_param(Cow::from("value"), &cask_name.clone());
+            return Err(error);
+        }
+    }
+    Ok(())
+}
+
 fn validate_app_store_app(app: &MacAppStoreApp) -> Result<(), ValidationError> {
     if app.base.app_paths.len() == 1 {
         return Ok(());
@@ -130,6 +148,10 @@ fn validate_macos_config(config: &MacOsConfig) -> Result<(), ValidationError> {
     let mut cask_names = HashSet::new();
     let mut app_store_ids = HashSet::new();
     let mut manual_and_testflight_names = HashSet::new();
+
+    if let Some(homebrew) = &config.homebrew {
+        cask_names.extend(&homebrew.non_app_casks);
+    }
 
     for app in &config.apps {
         match app {
@@ -260,7 +282,18 @@ mod tests {
     }
 
     fn homebrew() -> Homebrew {
-        Homebrew {}
+        Homebrew {
+            non_app_casks: Vec::new(),
+        }
+    }
+
+    fn homebrew_with_non_app_casks(cask_names: &[&str]) -> Homebrew {
+        Homebrew {
+            non_app_casks: cask_names
+                .iter()
+                .map(|&cask_name| cask_name.to_owned())
+                .collect(),
+        }
     }
 
     fn macos(homebrew: Option<Homebrew>, apps: Vec<MacOsApp>) -> MacOsConfig {
@@ -421,6 +454,36 @@ mod tests {
             "visual-studio--code",
             &["/Applications/Visual Studio Code.app"]
         )));
+    }
+
+    // -- Homebrew --
+
+    #[test]
+    fn allows_homebrew_with_no_non_app_casks() {
+        assert!(no_constraint_violation(&homebrew()));
+    }
+
+    #[test]
+    fn allows_homebrew_with_non_app_casks() {
+        assert!(no_constraint_violation(&homebrew_with_non_app_casks(&[
+            "font-fira-code",
+            "macfuse"
+        ])));
+    }
+
+    #[test]
+    fn disallows_invalid_non_app_cask_name() {
+        assert!(constraint_violation(&homebrew_with_non_app_casks(&[
+            "font-fira-code!"
+        ])));
+    }
+
+    #[test]
+    fn disallows_duplicate_non_app_cask_names() {
+        assert!(constraint_violation(&homebrew_with_non_app_casks(&[
+            "font-fira-code",
+            "font-fira-code"
+        ])));
     }
 
     // -- MacAppStoreApp --
@@ -596,6 +659,17 @@ mod tests {
                     &["/Applications/Visual Studio Code - Insiders.app"]
                 )),
             ]
+        )));
+    }
+
+    #[test]
+    fn disallows_casks_in_both_non_app_casks_and_apps() {
+        assert!(constraint_violation(&macos(
+            Some(homebrew_with_non_app_casks(&["visual-studio-code"])),
+            vec![MacOsApp::HomebrewCask(cask(
+                "visual-studio-code",
+                &["/Applications/Visual Studio Code.app"]
+            ))]
         )));
     }
 
