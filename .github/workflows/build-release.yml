@@ -61,6 +61,9 @@ jobs:
           name: pkl-package
           path: ./pkl/.out/uplare@${{ steps.version.outputs.version }}/
           if-no-files-found: error
+      - name: Check formatting
+        working-directory: ./pkl
+        run: pkl format --diff-name-only .
 
   rust-test:
     strategy:
