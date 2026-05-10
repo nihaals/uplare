@@ -296,12 +296,13 @@ fn main() -> Result<()> {
 
                 let mut sections: Vec<(&str, Vec<String>)> = Vec::new();
 
-                if config.install_homebrew != system_has_homebrew {
+                if config.homebrew.is_some() != system_has_homebrew {
                     sections.push((
                         "Homebrew installation status mismatch",
                         vec![format!(
-                            "config installHomebrew = {}, system has Homebrew = {}",
-                            config.install_homebrew, system_has_homebrew,
+                            "config homebrew installed = {}, system has Homebrew = {}",
+                            config.homebrew.is_some(),
+                            system_has_homebrew,
                         )],
                     ));
                 }

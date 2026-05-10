@@ -44,7 +44,7 @@ chmod +x uplare
 amends "package://github.com/nihaals/uplare/releases/download/v0.0.0/uplare-pkl@0.0.0#/MacOs.pkl"
 
 mac {
-  installHomebrew = true
+  homebrew = new Homebrew {}
   apps {
     new ManualApp {
       name = "Wolfram"

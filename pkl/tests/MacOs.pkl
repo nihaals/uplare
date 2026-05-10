@@ -231,17 +231,16 @@ facts {
 
   ["disallows empty apps"] {
     constraintViolation(new MacOs.MacOs {
-      installHomebrew = true
+      homebrew = new MacOs.Homebrew {}
       apps {}
     })
     constraintViolation(new MacOs.MacOs {
-      installHomebrew = false
       apps {}
     })
   }
-  ["allows cask with installHomebrew"] {
+  ["allows cask with homebrew"] {
     noConstraintViolation(new MacOs.MacOs {
-      installHomebrew = true
+      homebrew = new MacOs.Homebrew {}
       apps {
         new MacOs.HomebrewCask {
           caskName = "visual-studio-code"
@@ -252,7 +251,7 @@ facts {
       }
     })
     noConstraintViolation(new MacOs.MacOs {
-      installHomebrew = true
+      homebrew = new MacOs.Homebrew {}
       apps {
         new MacOs.HomebrewCask {
           caskName = "visual-studio-code"
@@ -269,9 +268,9 @@ facts {
       }
     })
   }
-  ["allows non-cask with installHomebrew"] {
+  ["allows non-cask with homebrew"] {
     noConstraintViolation(new MacOs.MacOs {
-      installHomebrew = true
+      homebrew = new MacOs.Homebrew {}
       apps {
         new MacOs.MacAppStoreApp {
           appStoreId = 1
@@ -282,9 +281,8 @@ facts {
       }
     })
   }
-  ["disallows cask with no installHomebrew"] {
+  ["disallows cask with no homebrew"] {
     constraintViolation(new MacOs.MacOs {
-      installHomebrew = false
       apps {
         new MacOs.HomebrewCask {
           caskName = "visual-studio-code"
@@ -295,7 +293,6 @@ facts {
       }
     })
     constraintViolation(new MacOs.MacOs {
-      installHomebrew = false
       apps {
         new MacOs.MacAppStoreApp {
           appStoreId = 1
@@ -312,9 +309,8 @@ facts {
       }
     })
   }
-  ["allows non-cask with no installHomebrew"] {
+  ["allows non-cask with no homebrew"] {
     noConstraintViolation(new MacOs.MacOs {
-      installHomebrew = false
       apps {
         new MacOs.MacAppStoreApp {
           appStoreId = 1
@@ -327,7 +323,7 @@ facts {
   }
   ["disallows duplicate app paths"] {
     constraintViolation(new MacOs.MacOs {
-      installHomebrew = true
+      homebrew = new MacOs.Homebrew {}
       apps {
         new MacOs.HomebrewCask {
           caskName = "visual-studio-code"
@@ -339,7 +335,7 @@ facts {
       }
     })
     constraintViolation(new MacOs.MacOs {
-      installHomebrew = true
+      homebrew = new MacOs.Homebrew {}
       apps {
         new MacOs.HomebrewCask {
           caskName = "visual-studio-code"
@@ -356,7 +352,7 @@ facts {
       }
     })
     constraintViolation(new MacOs.MacOs {
-      installHomebrew = true
+      homebrew = new MacOs.Homebrew {}
       apps {
         new MacOs.HomebrewCask {
           caskName = "visual-studio-code"
@@ -375,7 +371,7 @@ facts {
   }
   ["disallows duplicate cask names"] {
     constraintViolation(new MacOs.MacOs {
-      installHomebrew = true
+      homebrew = new MacOs.Homebrew {}
       apps {
         new MacOs.HomebrewCask {
           caskName = "visual-studio-code"
@@ -394,7 +390,7 @@ facts {
   }
   ["disallows duplicate app store ids"] {
     constraintViolation(new MacOs.MacOs {
-      installHomebrew = true
+      homebrew = new MacOs.Homebrew {}
       apps {
         new MacOs.MacAppStoreApp {
           appStoreId = 1
@@ -413,7 +409,6 @@ facts {
   }
   ["disallows duplicate testflight names"] {
     constraintViolation(new MacOs.MacOs {
-      installHomebrew = false
       apps {
         new MacOs.TestFlightApp {
           name = "My App"
@@ -432,7 +427,6 @@ facts {
   }
   ["disallows duplicate manual names"] {
     constraintViolation(new MacOs.MacOs {
-      installHomebrew = false
       apps {
         new MacOs.ManualApp {
           name = "My App"
@@ -451,7 +445,6 @@ facts {
   }
   ["disallows duplicate name across manual and testflight apps"] {
     constraintViolation(new MacOs.MacOs {
-      installHomebrew = false
       apps {
         new MacOs.ManualApp {
           name = "My App"
@@ -470,7 +463,6 @@ facts {
   }
   ["allows manual and testflight apps with different names"] {
     noConstraintViolation(new MacOs.MacOs {
-      installHomebrew = false
       apps {
         new MacOs.ManualApp {
           name = "My App"

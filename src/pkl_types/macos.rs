@@ -6,10 +6,13 @@ use validator::{Validate, ValidationError, ValidationErrors};
 #[serde(rename_all = "camelCase")]
 #[validate(schema(function = "validate_macos_config"))]
 pub struct MacOsConfig {
-    pub install_homebrew: bool,
+    pub homebrew: Option<Homebrew>,
     #[validate(length(min = 1), nested)]
     pub apps: Vec<MacOsApp>,
 }
+
+#[derive(Deserialize, Serialize)]
+pub struct Homebrew {}
 
 #[derive(Deserialize, Serialize)]
 #[serde(tag = "type")]
@@ -141,10 +144,8 @@ fn validate_macos_config(config: &MacOsConfig) -> Result<(), ValidationError> {
                 }
             }
             MacOsApp::HomebrewCask(cask) => {
-                if !config.install_homebrew {
-                    return Err(ValidationError::new(
-                        "homebrew_cask_requires_install_homebrew",
-                    ));
+                if config.homebrew.is_none() {
+                    return Err(ValidationError::new("homebrew_cask_requires_homebrew"));
                 }
                 if !cask_names.insert(&cask.cask_name) {
                     return Err(ValidationError::new("duplicate_cask_name"));
@@ -258,11 +259,12 @@ mod tests {
         }
     }
 
-    fn macos(install_homebrew: bool, apps: Vec<MacOsApp>) -> MacOsConfig {
-        MacOsConfig {
-            install_homebrew,
-            apps,
-        }
+    fn homebrew() -> Homebrew {
+        Homebrew {}
+    }
+
+    fn macos(homebrew: Option<Homebrew>, apps: Vec<MacOsApp>) -> MacOsConfig {
+        MacOsConfig { homebrew, apps }
     }
 
     // -- App path validation (BaseMacOsApp) --
@@ -472,21 +474,21 @@ mod tests {
 
     #[test]
     fn disallows_empty_apps() {
-        assert!(constraint_violation(&macos(true, vec![])));
-        assert!(constraint_violation(&macos(false, vec![])));
+        assert!(constraint_violation(&macos(Some(homebrew()), vec![])));
+        assert!(constraint_violation(&macos(None, vec![])));
     }
 
     #[test]
-    fn allows_cask_with_install_homebrew() {
+    fn allows_cask_with_homebrew() {
         assert!(no_constraint_violation(&macos(
-            true,
+            Some(homebrew()),
             vec![MacOsApp::HomebrewCask(cask(
                 "visual-studio-code",
                 &["/Applications/Visual Studio Code.app"]
             ))]
         )));
         assert!(no_constraint_violation(&macos(
-            true,
+            Some(homebrew()),
             vec![
                 MacOsApp::HomebrewCask(cask(
                     "visual-studio-code",
@@ -501,9 +503,9 @@ mod tests {
     }
 
     #[test]
-    fn allows_non_cask_with_install_homebrew() {
+    fn allows_non_cask_with_homebrew() {
         assert!(no_constraint_violation(&macos(
-            true,
+            Some(homebrew()),
             vec![MacOsApp::MacAppStoreApp(app_store(
                 1,
                 &["/Applications/Visual Studio Code.app"]
@@ -512,16 +514,16 @@ mod tests {
     }
 
     #[test]
-    fn disallows_cask_with_no_install_homebrew() {
+    fn disallows_cask_with_no_homebrew() {
         assert!(constraint_violation(&macos(
-            false,
+            None,
             vec![MacOsApp::HomebrewCask(cask(
                 "visual-studio-code",
                 &["/Applications/Visual Studio Code.app"]
             ))]
         )));
         assert!(constraint_violation(&macos(
-            false,
+            None,
             vec![
                 MacOsApp::MacAppStoreApp(app_store(1, &["/Applications/Visual Studio Code.app"])),
                 MacOsApp::HomebrewCask(cask(
@@ -533,9 +535,9 @@ mod tests {
     }
 
     #[test]
-    fn allows_non_cask_with_no_install_homebrew() {
+    fn allows_non_cask_with_no_homebrew() {
         assert!(no_constraint_violation(&macos(
-            false,
+            None,
             vec![MacOsApp::MacAppStoreApp(app_store(
                 1,
                 &["/Applications/Visual Studio Code.app"]
@@ -546,7 +548,7 @@ mod tests {
     #[test]
     fn disallows_duplicate_app_paths() {
         assert!(constraint_violation(&macos(
-            true,
+            Some(homebrew()),
             vec![MacOsApp::HomebrewCask(cask(
                 "visual-studio-code",
                 &[
@@ -556,7 +558,7 @@ mod tests {
             ))]
         )));
         assert!(constraint_violation(&macos(
-            true,
+            Some(homebrew()),
             vec![
                 MacOsApp::HomebrewCask(cask(
                     "visual-studio-code",
@@ -569,7 +571,7 @@ mod tests {
             ]
         )));
         assert!(constraint_violation(&macos(
-            true,
+            Some(homebrew()),
             vec![
                 MacOsApp::HomebrewCask(cask(
                     "visual-studio-code",
@@ -583,7 +585,7 @@ mod tests {
     #[test]
     fn disallows_duplicate_cask_names() {
         assert!(constraint_violation(&macos(
-            true,
+            Some(homebrew()),
             vec![
                 MacOsApp::HomebrewCask(cask(
                     "visual-studio-code",
@@ -600,7 +602,7 @@ mod tests {
     #[test]
     fn disallows_duplicate_app_store_ids() {
         assert!(constraint_violation(&macos(
-            true,
+            Some(homebrew()),
             vec![
                 MacOsApp::MacAppStoreApp(app_store(1, &["/Applications/Visual Studio Code.app"])),
                 MacOsApp::MacAppStoreApp(app_store(
@@ -614,7 +616,7 @@ mod tests {
     #[test]
     fn disallows_duplicate_testflight_names() {
         assert!(constraint_violation(&macos(
-            false,
+            None,
             vec![
                 MacOsApp::TestFlightApp(testflight("My App", &["/Applications/My App.app"])),
                 MacOsApp::TestFlightApp(testflight("My App", &["/Applications/My App 2.app"])),
@@ -625,7 +627,7 @@ mod tests {
     #[test]
     fn disallows_duplicate_manual_names() {
         assert!(constraint_violation(&macos(
-            false,
+            None,
             vec![
                 MacOsApp::ManualApp(manual("My App", &["/Applications/My App.app"])),
                 MacOsApp::ManualApp(manual("My App", &["/Applications/My App 2.app"])),
@@ -636,7 +638,7 @@ mod tests {
     #[test]
     fn disallows_duplicate_name_across_manual_and_testflight_apps() {
         assert!(constraint_violation(&macos(
-            false,
+            None,
             vec![
                 MacOsApp::ManualApp(manual("My App", &["/Applications/My App.app"])),
                 MacOsApp::TestFlightApp(testflight("My App", &["/Applications/My App 2.app"])),
@@ -647,7 +649,7 @@ mod tests {
     #[test]
     fn allows_manual_and_testflight_apps_with_different_names() {
         assert!(no_constraint_violation(&macos(
-            false,
+            None,
             vec![
                 MacOsApp::ManualApp(manual("My App", &["/Applications/My App.app"])),
                 MacOsApp::TestFlightApp(testflight(

@@ -41,6 +41,6 @@ local myApps: Listing<ExtendedManualApp | ExtendedCask> = new {
 }
 
 mac {
-  installHomebrew = true
+  homebrew = new Homebrew {}
   apps = myApps.toList().map((app) -> app.correct).toListing()
 }

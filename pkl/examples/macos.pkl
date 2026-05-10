@@ -1,7 +1,7 @@
 amends "../MacOs.pkl"
 
 mac {
-  installHomebrew = true
+  homebrew = new Homebrew {}
   apps {
     new ManualApp {
       name = "Wolfram"
