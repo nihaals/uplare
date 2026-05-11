@@ -188,6 +188,11 @@ fn main() -> Result<()> {
                 } else {
                     HashSet::new()
                 };
+                let installed_taps = if system_has_homebrew {
+                    macos::get_taps()?
+                } else {
+                    HashSet::new()
+                };
                 let (installed_app_store_apps, installed_testflight_apps): (
                     HashMap<u64, String>,
                     HashSet<String>,
@@ -290,6 +295,11 @@ fn main() -> Result<()> {
                     .as_ref()
                     .map(|homebrew| homebrew.non_app_casks.iter().map(String::as_str).collect())
                     .unwrap_or_default();
+                let configured_taps: HashSet<&str> = config
+                    .homebrew
+                    .as_ref()
+                    .map(|homebrew| homebrew.taps.iter().map(String::as_str).collect())
+                    .unwrap_or_default();
                 let all_configured_casks: HashSet<&str> = configured_casks
                     .union(&configured_non_app_casks)
                     .copied()
@@ -314,6 +324,36 @@ fn main() -> Result<()> {
                             system_has_homebrew,
                         )],
                     ));
+                }
+
+                {
+                    let mut configured_taps_not_installed: Vec<String> = configured_taps
+                        .iter()
+                        .filter(|&tap| !installed_taps.contains(*tap))
+                        .map(|&tap| tap.to_owned())
+                        .collect();
+                    configured_taps_not_installed.sort();
+                    if !configured_taps_not_installed.is_empty() {
+                        sections.push((
+                            "Configured Homebrew taps not installed",
+                            configured_taps_not_installed,
+                        ));
+                    }
+                }
+
+                {
+                    let mut installed_taps_not_configured: Vec<String> = installed_taps
+                        .iter()
+                        .filter(|tap| !configured_taps.contains(tap.as_str()))
+                        .cloned()
+                        .collect();
+                    installed_taps_not_configured.sort();
+                    if !installed_taps_not_configured.is_empty() {
+                        sections.push((
+                            "Installed Homebrew taps not in config",
+                            installed_taps_not_configured,
+                        ));
+                    }
                 }
 
                 {

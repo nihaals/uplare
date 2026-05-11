@@ -15,6 +15,8 @@ pub struct MacOsConfig {
 #[derive(Deserialize, Serialize, Validate)]
 #[serde(rename_all = "camelCase")]
 pub struct Homebrew {
+    #[validate(custom(function = "validate_taps"))]
+    pub taps: Vec<String>,
     #[validate(custom(function = "validate_cask_names"))]
     pub non_app_casks: Vec<String>,
 }
@@ -121,6 +123,23 @@ fn validate_cask_names(cask_names: &Vec<String>) -> Result<(), ValidationError> 
         if !seen.insert(cask_name) {
             let mut error = ValidationError::new("duplicate_cask_name");
             error.add_param(Cow::from("value"), &cask_name.clone());
+            return Err(error);
+        }
+    }
+    Ok(())
+}
+
+fn validate_taps(taps: &Vec<String>) -> Result<(), ValidationError> {
+    let mut seen = HashSet::new();
+    for tap in taps {
+        if tap.matches('/').count() != 1 {
+            let mut error = ValidationError::new("invalid_tap");
+            error.add_param(Cow::from("value"), &tap.clone());
+            return Err(error);
+        }
+        if !seen.insert(tap) {
+            let mut error = ValidationError::new("duplicate_tap");
+            error.add_param(Cow::from("value"), &tap.clone());
             return Err(error);
         }
     }
@@ -283,12 +302,21 @@ mod tests {
 
     fn homebrew() -> Homebrew {
         Homebrew {
+            taps: Vec::new(),
+            non_app_casks: Vec::new(),
+        }
+    }
+
+    fn homebrew_with_taps(taps: &[&str]) -> Homebrew {
+        Homebrew {
+            taps: taps.iter().map(|&tap| tap.to_owned()).collect(),
             non_app_casks: Vec::new(),
         }
     }
 
     fn homebrew_with_non_app_casks(cask_names: &[&str]) -> Homebrew {
         Homebrew {
+            taps: Vec::new(),
             non_app_casks: cask_names
                 .iter()
                 .map(|&cask_name| cask_name.to_owned())
@@ -461,6 +489,39 @@ mod tests {
     #[test]
     fn allows_homebrew_with_no_non_app_casks() {
         assert!(no_constraint_violation(&homebrew()));
+    }
+
+    #[test]
+    fn allows_homebrew_with_no_taps() {
+        assert!(no_constraint_violation(&homebrew_with_taps(&[])));
+    }
+
+    #[test]
+    fn allows_homebrew_with_taps() {
+        assert!(no_constraint_violation(&homebrew_with_taps(&[
+            "homebrew/cask",
+            "homebrew/core"
+        ])));
+    }
+
+    #[test]
+    fn disallows_duplicate_taps() {
+        assert!(constraint_violation(&homebrew_with_taps(&[
+            "homebrew/cask",
+            "homebrew/cask"
+        ])));
+    }
+
+    #[test]
+    fn disallows_tap_with_no_slash() {
+        assert!(constraint_violation(&homebrew_with_taps(&["homebrew"])));
+    }
+
+    #[test]
+    fn disallows_tap_with_two_slashes() {
+        assert!(constraint_violation(&homebrew_with_taps(&[
+            "homebrew/cask/fonts"
+        ])));
     }
 
     #[test]

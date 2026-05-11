@@ -41,6 +41,33 @@ pub fn get_installed_casks() -> Result<HashSet<String>> {
     })
 }
 
+pub fn get_taps() -> Result<HashSet<String>> {
+    let output = Command::new("brew")
+        .arg("tap")
+        .output()
+        .context("Failed to run `brew tap`")?;
+
+    if !output.status.success() {
+        bail!("`brew tap` failed with non-zero exit code");
+    }
+
+    let stdout =
+        String::from_utf8(output.stdout).context("`brew tap` output was not valid UTF-8")?;
+    Ok({
+        stdout
+            .lines()
+            .filter_map(|line| {
+                let trimmed = line.trim();
+                if trimmed.is_empty() {
+                    None
+                } else {
+                    Some(trimmed.to_owned())
+                }
+            })
+            .collect()
+    })
+}
+
 #[derive(PartialEq, Eq, Hash)]
 pub enum MacAppStoreApp {
     AppStore { app_id: u64, app_name: String },

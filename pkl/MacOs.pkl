@@ -20,6 +20,7 @@ class MacOs {
 
 local const caskRegex = Regex(#"(?!.*--)(?!.*@.*@)[a-z0-9]([a-z0-9-@]*[a-z0-9])?"#)
 class Homebrew {
+  taps: Listing<String(splitLimit("/", 3).length == 2)>(isDistinct)
   nonAppCasks: Listing<String(matches(caskRegex))>(isDistinct)
 }
 

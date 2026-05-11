@@ -186,6 +186,41 @@ facts {
       nonAppCasks {}
     })
   }
+  ["allows homebrew with no taps"] {
+    noConstraintViolation(new MacOs.Homebrew {
+      taps {}
+    })
+  }
+  ["allows homebrew with taps"] {
+    noConstraintViolation(new MacOs.Homebrew {
+      taps {
+        "homebrew/cask"
+        "homebrew/core"
+      }
+    })
+  }
+  ["disallows duplicate taps"] {
+    constraintViolation(new MacOs.Homebrew {
+      taps {
+        "homebrew/cask"
+        "homebrew/cask"
+      }
+    })
+  }
+  ["disallows tap with no slash"] {
+    constraintViolation(new MacOs.Homebrew {
+      taps {
+        "homebrew"
+      }
+    })
+  }
+  ["disallows tap with two slashes"] {
+    constraintViolation(new MacOs.Homebrew {
+      taps {
+        "homebrew/cask/fonts"
+      }
+    })
+  }
   ["allows homebrew with non-app casks"] {
     noConstraintViolation(new MacOs.Homebrew {
       nonAppCasks {
