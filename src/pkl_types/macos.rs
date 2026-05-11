@@ -261,15 +261,27 @@ fn package_name_end(package_name: &str) -> &str {
     package_name.rsplit('/').next().unwrap_or(package_name)
 }
 
-fn is_valid_cask_name(cask_name: &str) -> bool {
-    is_valid_homebrew_package_name(cask_name, false)
+#[derive(PartialEq, Eq)]
+enum PackageType {
+    Formula,
+    Cask,
+}
+
+impl PackageType {
+    fn is_formula(&self) -> bool {
+        *self == PackageType::Formula
+    }
 }
 
 fn is_valid_formula_name(formula_name: &str) -> bool {
-    is_valid_homebrew_package_name(formula_name, true)
+    is_valid_homebrew_package_name(formula_name, PackageType::Formula)
 }
 
-fn is_valid_homebrew_package_name(package_name: &str, allow_underscore: bool) -> bool {
+fn is_valid_cask_name(cask_name: &str) -> bool {
+    is_valid_homebrew_package_name(cask_name, PackageType::Cask)
+}
+
+fn is_valid_homebrew_package_name(package_name: &str, package_type: PackageType) -> bool {
     let slash_count = package_name.matches('/').count();
     if slash_count != 0 && slash_count != 2 {
         return false;
@@ -298,6 +310,7 @@ fn is_valid_homebrew_package_name(package_name: &str, allow_underscore: bool) ->
         return false;
     }
 
+    let has_at = package_name.contains('@');
     let mut at_count = 0;
     for c in package_name.chars() {
         if c == '@' {
@@ -307,7 +320,8 @@ fn is_valid_homebrew_package_name(package_name: &str, allow_underscore: bool) ->
             || c.is_ascii_digit()
             || c == '-'
             || c == '@'
-            || (allow_underscore && c == '_'))
+            || (package_type.is_formula() && c == '_')
+            || (package_type.is_formula() && (!has_at || at_count > 0) && c == '.'))
         {
             return false;
         }
@@ -569,6 +583,14 @@ mod tests {
     }
 
     #[test]
+    fn disallows_dot_after_at_in_cask_name() {
+        assert!(constraint_violation(&cask(
+            "visual-studio-code@1.2",
+            &["/Applications/Visual Studio Code.app"]
+        )));
+    }
+
+    #[test]
     fn disallows_double_dash_in_cask_name() {
         assert!(constraint_violation(&cask(
             "visual-studio--code",
@@ -633,6 +655,8 @@ mod tests {
             "xz",
             "ca-certificates",
             "hdrhistogram_c",
+            "python@3.14",
+            "llama.cpp",
             "homebrew/core/openssl@3",
         ])));
     }
@@ -644,6 +668,17 @@ mod tests {
         ])));
         assert!(constraint_violation(&homebrew_with_formulae(&[
             "ca-certificates!"
+        ])));
+        assert!(constraint_violation(&homebrew_with_formulae(&[
+            "python.3@14"
+        ])));
+        assert!(constraint_violation(&homebrew_with_formulae(&["@python"])));
+        assert!(constraint_violation(&homebrew_with_formulae(&["python@"])));
+        assert!(constraint_violation(&homebrew_with_formulae(&[
+            "python@@3"
+        ])));
+        assert!(constraint_violation(&homebrew_with_formulae(&[
+            "python@3@14"
         ])));
     }
 

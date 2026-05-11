@@ -182,6 +182,14 @@ facts {
       }
     })
   }
+  ["disallows dot after @ in cask name"] {
+    constraintViolation(new MacOs.HomebrewCask {
+      caskName = "visual-studio-code@1.2"
+      appPaths {
+        "/Applications/Visual Studio Code.app"
+      }
+    })
+  }
   ["disallows double dash in cask name"] {
     constraintViolation(new MacOs.HomebrewCask {
       caskName = "visual-studio--code"
@@ -250,6 +258,8 @@ facts {
         "xz"
         "ca-certificates"
         "hdrhistogram_c"
+        "python@3.14"
+        "llama.cpp"
         "homebrew/core/openssl@3"
       }
     })
@@ -263,6 +273,31 @@ facts {
     constraintViolation(new MacOs.Homebrew {
       explicitlyInstalledFormulae {
         "ca-certificates!"
+      }
+    })
+    constraintViolation(new MacOs.Homebrew {
+      explicitlyInstalledFormulae {
+        "python.3@14"
+      }
+    })
+    constraintViolation(new MacOs.Homebrew {
+      explicitlyInstalledFormulae {
+        "@python"
+      }
+    })
+    constraintViolation(new MacOs.Homebrew {
+      explicitlyInstalledFormulae {
+        "python@"
+      }
+    })
+    constraintViolation(new MacOs.Homebrew {
+      explicitlyInstalledFormulae {
+        "python@@3"
+      }
+    })
+    constraintViolation(new MacOs.Homebrew {
+      explicitlyInstalledFormulae {
+        "python@3@14"
       }
     })
   }
