@@ -16,16 +16,16 @@ pub fn homebrew_is_installed() -> bool {
 
 pub fn get_installed_casks() -> Result<HashSet<String>> {
     let output = Command::new("brew")
-        .args(["list", "--cask"])
+        .args(["list", "--cask", "--full-name"])
         .output()
-        .context("Failed to run `brew list --cask`")?;
+        .context("Failed to run `brew list --cask --full-name`")?;
 
     if !output.status.success() {
-        bail!("`brew list --cask` failed with non-zero exit code");
+        bail!("`brew list --cask --full-name` failed with non-zero exit code");
     }
 
     let stdout = String::from_utf8(output.stdout)
-        .context("`brew list --cask` output was not valid UTF-8")?;
+        .context("`brew list --cask --full-name` output was not valid UTF-8")?;
     Ok({
         stdout
             .lines()

@@ -90,6 +90,18 @@ facts {
         "/Applications/a.app"
       }
     })
+    noConstraintViolation(new MacOs.HomebrewCask {
+      caskName = "user/repo/visual-studio-code"
+      appPaths {
+        "/Applications/Visual Studio Code.app"
+      }
+    })
+    noConstraintViolation(new MacOs.HomebrewCask {
+      caskName = "homebrew/cask/visual-studio-code@insiders"
+      appPaths {
+        "/Applications/Visual Studio Code - Insiders.app"
+      }
+    })
   }
   ["allows cask with multiple app paths"] {
     noConstraintViolation(new MacOs.HomebrewCask {
@@ -178,6 +190,22 @@ facts {
       }
     })
   }
+  ["disallows cask name with one slash"] {
+    constraintViolation(new MacOs.HomebrewCask {
+      caskName = "repo/visual-studio-code"
+      appPaths {
+        "/Applications/Visual Studio Code.app"
+      }
+    })
+  }
+  ["disallows cask name with more than two slashes"] {
+    constraintViolation(new MacOs.HomebrewCask {
+      caskName = "homebrew/cask/fonts/font-fira-code"
+      appPaths {
+        "/Applications/Font Fira Code.app"
+      }
+    })
+  }
 
   // -- Homebrew --
 
@@ -226,6 +254,7 @@ facts {
       nonAppCasks {
         "font-fira-code"
         "macfuse"
+        "homebrew/cask/font-fira-code-nerd-font"
       }
     })
   }
@@ -447,6 +476,61 @@ facts {
         }
         new MacOs.HomebrewCask {
           caskName = "visual-studio-code"
+          appPaths {
+            "/Applications/Visual Studio Code - Insiders.app"
+          }
+        }
+      }
+    })
+  }
+  ["allows casks with the same tap and different cask names"] {
+    noConstraintViolation(new MacOs.MacOs {
+      homebrew = new MacOs.Homebrew {}
+      apps {
+        new MacOs.HomebrewCask {
+          caskName = "homebrew/cask/visual-studio-code"
+          appPaths {
+            "/Applications/Visual Studio Code.app"
+          }
+        }
+        new MacOs.HomebrewCask {
+          caskName = "homebrew/cask/visual-studio-code@insiders"
+          appPaths {
+            "/Applications/Visual Studio Code - Insiders.app"
+          }
+        }
+      }
+    })
+  }
+  ["disallows duplicate cask name ends"] {
+    constraintViolation(new MacOs.MacOs {
+      homebrew = new MacOs.Homebrew {}
+      apps {
+        new MacOs.HomebrewCask {
+          caskName = "homebrew/cask/visual-studio-code"
+          appPaths {
+            "/Applications/Visual Studio Code.app"
+          }
+        }
+        new MacOs.HomebrewCask {
+          caskName = "visual-studio-code"
+          appPaths {
+            "/Applications/Visual Studio Code - Insiders.app"
+          }
+        }
+      }
+    })
+    constraintViolation(new MacOs.MacOs {
+      homebrew = new MacOs.Homebrew {}
+      apps {
+        new MacOs.HomebrewCask {
+          caskName = "homebrew/cask/visual-studio-code"
+          appPaths {
+            "/Applications/Visual Studio Code.app"
+          }
+        }
+        new MacOs.HomebrewCask {
+          caskName = "user/repo/visual-studio-code"
           appPaths {
             "/Applications/Visual Studio Code - Insiders.app"
           }

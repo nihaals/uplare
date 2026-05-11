@@ -120,7 +120,7 @@ fn validate_cask_names(cask_names: &Vec<String>) -> Result<(), ValidationError> 
     let mut seen = HashSet::new();
     for cask_name in cask_names {
         validate_cask_name(cask_name)?;
-        if !seen.insert(cask_name) {
+        if !seen.insert(cask_name_end(cask_name)) {
             let mut error = ValidationError::new("duplicate_cask_name");
             error.add_param(Cow::from("value"), &cask_name.clone());
             return Err(error);
@@ -169,7 +169,12 @@ fn validate_macos_config(config: &MacOsConfig) -> Result<(), ValidationError> {
     let mut manual_and_testflight_names = HashSet::new();
 
     if let Some(homebrew) = &config.homebrew {
-        cask_names.extend(&homebrew.non_app_casks);
+        cask_names.extend(
+            homebrew
+                .non_app_casks
+                .iter()
+                .map(|cask_name| cask_name_end(cask_name)),
+        );
     }
 
     for app in &config.apps {
@@ -188,7 +193,7 @@ fn validate_macos_config(config: &MacOsConfig) -> Result<(), ValidationError> {
                 if config.homebrew.is_none() {
                     return Err(ValidationError::new("homebrew_cask_requires_homebrew"));
                 }
-                if !cask_names.insert(&cask.cask_name) {
+                if !cask_names.insert(cask_name_end(&cask.cask_name)) {
                     return Err(ValidationError::new("duplicate_cask_name"));
                 }
                 for app_path in &cask.base.app_paths {
@@ -228,7 +233,35 @@ fn is_valid_mac_app_path(app_path: &str) -> bool {
         && app_path.ends_with(".app")
 }
 
+fn cask_name_end(cask_name: &str) -> &str {
+    cask_name.rsplit('/').next().unwrap_or(cask_name)
+}
+
 fn is_valid_cask_name(cask_name: &str) -> bool {
+    let slash_count = cask_name.matches('/').count();
+    if slash_count != 0 && slash_count != 2 {
+        return false;
+    }
+
+    let cask_name = if slash_count == 2 {
+        let mut parts = cask_name.split('/');
+        let Some(user) = parts.next() else {
+            return false;
+        };
+        let Some(repo) = parts.next() else {
+            return false;
+        };
+        let Some(cask_name) = parts.next() else {
+            return false;
+        };
+        if user.is_empty() || repo.is_empty() {
+            return false;
+        }
+        cask_name
+    } else {
+        cask_name
+    };
+
     if cask_name.is_empty() || cask_name.contains("--") {
         return false;
     }
@@ -403,6 +436,14 @@ mod tests {
             "a",
             &["/Applications/a.app"]
         )));
+        assert!(no_constraint_violation(&cask(
+            "user/repo/visual-studio-code",
+            &["/Applications/Visual Studio Code.app"]
+        )));
+        assert!(no_constraint_violation(&cask(
+            "homebrew/cask/visual-studio-code@insiders",
+            &["/Applications/Visual Studio Code - Insiders.app"]
+        )));
     }
 
     #[test]
@@ -484,6 +525,22 @@ mod tests {
         )));
     }
 
+    #[test]
+    fn disallows_cask_name_with_one_slash() {
+        assert!(constraint_violation(&cask(
+            "repo/visual-studio-code",
+            &["/Applications/Visual Studio Code.app"]
+        )));
+    }
+
+    #[test]
+    fn disallows_cask_name_with_more_than_two_slashes() {
+        assert!(constraint_violation(&cask(
+            "homebrew/cask/fonts/font-fira-code",
+            &["/Applications/Font Fira Code.app"]
+        )));
+    }
+
     // -- Homebrew --
 
     #[test]
@@ -528,7 +585,8 @@ mod tests {
     fn allows_homebrew_with_non_app_casks() {
         assert!(no_constraint_violation(&homebrew_with_non_app_casks(&[
             "font-fira-code",
-            "macfuse"
+            "macfuse",
+            "homebrew/cask/font-fira-code-nerd-font"
         ])));
     }
 
@@ -717,6 +775,53 @@ mod tests {
                 )),
                 MacOsApp::HomebrewCask(cask(
                     "visual-studio-code",
+                    &["/Applications/Visual Studio Code - Insiders.app"]
+                )),
+            ]
+        )));
+    }
+
+    #[test]
+    fn allows_casks_with_the_same_tap_and_different_cask_names() {
+        assert!(no_constraint_violation(&macos(
+            Some(homebrew()),
+            vec![
+                MacOsApp::HomebrewCask(cask(
+                    "homebrew/cask/visual-studio-code",
+                    &["/Applications/Visual Studio Code.app"]
+                )),
+                MacOsApp::HomebrewCask(cask(
+                    "homebrew/cask/visual-studio-code@insiders",
+                    &["/Applications/Visual Studio Code - Insiders.app"]
+                )),
+            ]
+        )));
+    }
+
+    #[test]
+    fn disallows_duplicate_cask_name_ends() {
+        assert!(constraint_violation(&macos(
+            Some(homebrew()),
+            vec![
+                MacOsApp::HomebrewCask(cask(
+                    "homebrew/cask/visual-studio-code",
+                    &["/Applications/Visual Studio Code.app"]
+                )),
+                MacOsApp::HomebrewCask(cask(
+                    "visual-studio-code",
+                    &["/Applications/Visual Studio Code - Insiders.app"]
+                )),
+            ]
+        )));
+        assert!(constraint_violation(&macos(
+            Some(homebrew()),
+            vec![
+                MacOsApp::HomebrewCask(cask(
+                    "homebrew/cask/visual-studio-code",
+                    &["/Applications/Visual Studio Code.app"]
+                )),
+                MacOsApp::HomebrewCask(cask(
+                    "user/repo/visual-studio-code",
                     &["/Applications/Visual Studio Code - Insiders.app"]
                 )),
             ]
