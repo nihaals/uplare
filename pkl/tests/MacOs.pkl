@@ -643,6 +643,21 @@ facts {
         }
       }
     })
+    constraintViolation(new MacOs.MacOs {
+      homebrew = new MacOs.Homebrew {
+        nonAppCasks {
+          "homebrew/cask/visual-studio-code"
+        }
+      }
+      apps {
+        new MacOs.HomebrewCask {
+          caskName = "visual-studio-code"
+          appPaths {
+            "/Applications/Visual Studio Code.app"
+          }
+        }
+      }
+    })
   }
   ["disallows duplicate app store ids"] {
     constraintViolation(new MacOs.MacOs {

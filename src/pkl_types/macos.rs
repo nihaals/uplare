@@ -964,6 +964,15 @@ mod tests {
                 &["/Applications/Visual Studio Code.app"]
             ))]
         )));
+        assert!(constraint_violation(&macos(
+            Some(homebrew_with_non_app_casks(&[
+                "homebrew/cask/visual-studio-code"
+            ])),
+            vec![MacOsApp::HomebrewCask(cask(
+                "visual-studio-code",
+                &["/Applications/Visual Studio Code.app"]
+            ))]
+        )));
     }
 
     #[test]
