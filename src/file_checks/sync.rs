@@ -220,7 +220,7 @@ pub fn sync_sync_file_checks(file_checks: &[FileCheck], root: &Path) -> Result<F
 mod tests {
     use super::*;
 
-    use std::fs;
+    use std::{env, fs};
 
     use crate::pkl_types::file_check::{DirectorySync, FileSync};
 
@@ -309,6 +309,27 @@ mod tests {
             &[sync_entry("/source/a/"), sync_entry("/source/a/b.txt")],
         );
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_ensure_sync_entry_paths_do_not_overlap_overlap_home() {
+        let home_dir: PathBuf = env::var("HOME").unwrap().into();
+
+        let result = ensure_sync_entry_paths_do_not_overlap(
+            Path::new("/root/"),
+            &[
+                sync_entry("~/source/a/"),
+                sync_entry(home_dir.join("source/a/b.txt").to_str().unwrap()),
+            ],
+        );
+        assert!(result.is_err());
+        assert!(
+            result
+                .err()
+                .unwrap()
+                .to_string()
+                .contains("Sync sources overlap"),
+        )
     }
 
     #[test]
