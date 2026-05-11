@@ -10,7 +10,7 @@ class MacOs {
       && (
         toList().filterIsInstance(HomebrewCask).map((app) -> app.caskName)
           + (homebrew?.nonAppCasks?.toList() ?? List())
-      ).isDistinctBy((name) -> caskNameEnd(name))
+      ).isDistinctBy((name) -> lastSlash(name))
       && toList().filterIsInstance(MacAppStoreApp).isDistinctBy((app) -> app.appStoreId)
       && toList()
         .filter((app) -> app is ManualApp || app is TestFlightApp)
@@ -18,12 +18,16 @@ class MacOs {
   )
 }
 
+local const formulaRegex =
+  Regex(#"([^/]+/[^/]+/)?(?!.*--)(?!.*__)(?!.*@.*@)[a-z0-9]([a-z0-9-_@]*[a-z0-9])?"#)
 local const caskRegex = Regex(#"([^/]+/[^/]+/)?(?!.*--)(?!.*@.*@)[a-z0-9]([a-z0-9-@]*[a-z0-9])?"#)
-local const function caskNameEnd(caskName: String): String =
-  if (caskName.splitLimit("/", 3).length == 3) caskName.splitLimit("/", 3)[2] else caskName
+local const function lastSlash(token: String): String = token.split("/").last
 class Homebrew {
   taps: Listing<String(splitLimit("/", 3).length == 2)>(isDistinct)
-  nonAppCasks: Listing<String(matches(caskRegex))>(isDistinctBy((name) -> caskNameEnd(name)))
+  explicitlyInstalledFormulae: Listing<String(matches(formulaRegex))>(
+    isDistinctBy((name) -> lastSlash(name)),
+  )
+  nonAppCasks: Listing<String(matches(caskRegex))>(isDistinctBy((name) -> lastSlash(name)))
 }
 
 typealias MacApp = ManualApp | HomebrewCask | MacAppStoreApp | TestFlightApp

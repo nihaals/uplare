@@ -2,6 +2,9 @@ amends "../MacOs.pkl"
 
 mac {
   homebrew = new Homebrew {
+    explicitlyInstalledFormulae {
+      "ffmpeg"
+    }
     nonAppCasks {
       "font-fira-code"
     }

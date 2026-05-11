@@ -17,6 +17,8 @@ pub struct MacOsConfig {
 pub struct Homebrew {
     #[validate(custom(function = "validate_taps"))]
     pub taps: Vec<String>,
+    #[validate(custom(function = "validate_formula_names"))]
+    pub explicitly_installed_formulae: Vec<String>,
     #[validate(custom(function = "validate_cask_names"))]
     pub non_app_casks: Vec<String>,
 }
@@ -120,9 +122,31 @@ fn validate_cask_names(cask_names: &Vec<String>) -> Result<(), ValidationError> 
     let mut seen = HashSet::new();
     for cask_name in cask_names {
         validate_cask_name(cask_name)?;
-        if !seen.insert(cask_name_end(cask_name)) {
+        if !seen.insert(package_name_end(cask_name)) {
             let mut error = ValidationError::new("duplicate_cask_name");
             error.add_param(Cow::from("value"), &cask_name.clone());
+            return Err(error);
+        }
+    }
+    Ok(())
+}
+
+fn validate_formula_name(formula_name: &str) -> Result<(), ValidationError> {
+    if is_valid_formula_name(formula_name) {
+        return Ok(());
+    }
+    let mut error = ValidationError::new("invalid_formula_name");
+    error.add_param(Cow::from("value"), &formula_name.to_string());
+    Err(error)
+}
+
+fn validate_formula_names(formula_names: &Vec<String>) -> Result<(), ValidationError> {
+    let mut seen = HashSet::new();
+    for formula_name in formula_names {
+        validate_formula_name(formula_name)?;
+        if !seen.insert(package_name_end(formula_name)) {
+            let mut error = ValidationError::new("duplicate_formula_name");
+            error.add_param(Cow::from("value"), &formula_name.clone());
             return Err(error);
         }
     }
@@ -173,7 +197,7 @@ fn validate_macos_config(config: &MacOsConfig) -> Result<(), ValidationError> {
             homebrew
                 .non_app_casks
                 .iter()
-                .map(|cask_name| cask_name_end(cask_name)),
+                .map(|cask_name| package_name_end(cask_name)),
         );
     }
 
@@ -193,7 +217,7 @@ fn validate_macos_config(config: &MacOsConfig) -> Result<(), ValidationError> {
                 if config.homebrew.is_none() {
                     return Err(ValidationError::new("homebrew_cask_requires_homebrew"));
                 }
-                if !cask_names.insert(cask_name_end(&cask.cask_name)) {
+                if !cask_names.insert(package_name_end(&cask.cask_name)) {
                     return Err(ValidationError::new("duplicate_cask_name"));
                 }
                 for app_path in &cask.base.app_paths {
@@ -233,45 +257,58 @@ fn is_valid_mac_app_path(app_path: &str) -> bool {
         && app_path.ends_with(".app")
 }
 
-fn cask_name_end(cask_name: &str) -> &str {
-    cask_name.rsplit('/').next().unwrap_or(cask_name)
+fn package_name_end(package_name: &str) -> &str {
+    package_name.rsplit('/').next().unwrap_or(package_name)
 }
 
 fn is_valid_cask_name(cask_name: &str) -> bool {
-    let slash_count = cask_name.matches('/').count();
+    is_valid_homebrew_package_name(cask_name, false)
+}
+
+fn is_valid_formula_name(formula_name: &str) -> bool {
+    is_valid_homebrew_package_name(formula_name, true)
+}
+
+fn is_valid_homebrew_package_name(package_name: &str, allow_underscore: bool) -> bool {
+    let slash_count = package_name.matches('/').count();
     if slash_count != 0 && slash_count != 2 {
         return false;
     }
 
-    let cask_name = if slash_count == 2 {
-        let mut parts = cask_name.split('/');
+    let package_name = if slash_count == 2 {
+        let mut parts = package_name.split('/');
         let Some(user) = parts.next() else {
             return false;
         };
         let Some(repo) = parts.next() else {
             return false;
         };
-        let Some(cask_name) = parts.next() else {
+        let Some(package_name) = parts.next() else {
             return false;
         };
         if user.is_empty() || repo.is_empty() {
             return false;
         }
-        cask_name
+        package_name
     } else {
-        cask_name
+        package_name
     };
 
-    if cask_name.is_empty() || cask_name.contains("--") {
+    if package_name.is_empty() || package_name.contains("--") || package_name.contains("__") {
         return false;
     }
 
     let mut at_count = 0;
-    for c in cask_name.chars() {
+    for c in package_name.chars() {
         if c == '@' {
             at_count += 1;
         }
-        if !(c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '@') {
+        if !(c.is_ascii_lowercase()
+            || c.is_ascii_digit()
+            || c == '-'
+            || c == '@'
+            || (allow_underscore && c == '_'))
+        {
             return false;
         }
     }
@@ -280,8 +317,8 @@ fn is_valid_cask_name(cask_name: &str) -> bool {
         return false;
     }
 
-    let first = cask_name.chars().next().unwrap();
-    let last = cask_name.chars().last().unwrap();
+    let first = package_name.chars().next().unwrap();
+    let last = package_name.chars().last().unwrap();
 
     (first.is_ascii_lowercase() || first.is_ascii_digit())
         && (last.is_ascii_lowercase() || last.is_ascii_digit())
@@ -336,6 +373,7 @@ mod tests {
     fn homebrew() -> Homebrew {
         Homebrew {
             taps: Vec::new(),
+            explicitly_installed_formulae: Vec::new(),
             non_app_casks: Vec::new(),
         }
     }
@@ -343,6 +381,7 @@ mod tests {
     fn homebrew_with_taps(taps: &[&str]) -> Homebrew {
         Homebrew {
             taps: taps.iter().map(|&tap| tap.to_owned()).collect(),
+            explicitly_installed_formulae: Vec::new(),
             non_app_casks: Vec::new(),
         }
     }
@@ -350,10 +389,22 @@ mod tests {
     fn homebrew_with_non_app_casks(cask_names: &[&str]) -> Homebrew {
         Homebrew {
             taps: Vec::new(),
+            explicitly_installed_formulae: Vec::new(),
             non_app_casks: cask_names
                 .iter()
                 .map(|&cask_name| cask_name.to_owned())
                 .collect(),
+        }
+    }
+
+    fn homebrew_with_formulae(formula_names: &[&str]) -> Homebrew {
+        Homebrew {
+            taps: Vec::new(),
+            explicitly_installed_formulae: formula_names
+                .iter()
+                .map(|&formula_name| formula_name.to_owned())
+                .collect(),
+            non_app_casks: Vec::new(),
         }
     }
 
@@ -544,11 +595,6 @@ mod tests {
     // -- Homebrew --
 
     #[test]
-    fn allows_homebrew_with_no_non_app_casks() {
-        assert!(no_constraint_violation(&homebrew()));
-    }
-
-    #[test]
     fn allows_homebrew_with_no_taps() {
         assert!(no_constraint_violation(&homebrew_with_taps(&[])));
     }
@@ -582,6 +628,44 @@ mod tests {
     }
 
     #[test]
+    fn allows_homebrew_with_explicitly_installed_formulae() {
+        assert!(no_constraint_violation(&homebrew_with_formulae(&[
+            "xz",
+            "ca-certificates",
+            "hdrhistogram_c",
+            "homebrew/core/openssl@3",
+        ])));
+    }
+
+    #[test]
+    fn disallows_invalid_explicitly_installed_formula() {
+        assert!(constraint_violation(&homebrew_with_formulae(&[
+            "hdrhistogram__c"
+        ])));
+        assert!(constraint_violation(&homebrew_with_formulae(&[
+            "ca-certificates!"
+        ])));
+    }
+
+    #[test]
+    fn disallows_duplicate_explicitly_installed_formulae() {
+        assert!(constraint_violation(&homebrew_with_formulae(&["xz", "xz"])));
+        assert!(constraint_violation(&homebrew_with_formulae(&[
+            "homebrew/core/openssl@3",
+            "openssl@3"
+        ])));
+        assert!(constraint_violation(&homebrew_with_formulae(&[
+            "homebrew/core/openssl@3",
+            "user/repo/openssl@3"
+        ])));
+    }
+
+    #[test]
+    fn allows_homebrew_with_no_non_app_casks() {
+        assert!(no_constraint_violation(&homebrew()));
+    }
+
+    #[test]
     fn allows_homebrew_with_non_app_casks() {
         assert!(no_constraint_violation(&homebrew_with_non_app_casks(&[
             "font-fira-code",
@@ -602,6 +686,14 @@ mod tests {
         assert!(constraint_violation(&homebrew_with_non_app_casks(&[
             "font-fira-code",
             "font-fira-code"
+        ])));
+        assert!(constraint_violation(&homebrew_with_non_app_casks(&[
+            "homebrew/cask/font-fira-code",
+            "font-fira-code"
+        ])));
+        assert!(constraint_violation(&homebrew_with_non_app_casks(&[
+            "homebrew/cask/font-fira-code",
+            "user/repo/font-fira-code"
         ])));
     }
 

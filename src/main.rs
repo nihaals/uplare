@@ -188,6 +188,11 @@ fn main() -> Result<()> {
                 } else {
                     HashSet::new()
                 };
+                let installed_formulae = if system_has_homebrew {
+                    macos::get_explicitly_installed_formulae()?
+                } else {
+                    HashSet::new()
+                };
                 let installed_taps = if system_has_homebrew {
                     macos::get_taps()?
                 } else {
@@ -290,15 +295,26 @@ fn main() -> Result<()> {
                     .iter()
                     .map(|(cask_name, _)| *cask_name)
                     .collect();
-                let configured_non_app_casks: HashSet<&str> = config
-                    .homebrew
-                    .as_ref()
-                    .map(|homebrew| homebrew.non_app_casks.iter().map(String::as_str).collect())
-                    .unwrap_or_default();
                 let configured_taps: HashSet<&str> = config
                     .homebrew
                     .as_ref()
                     .map(|homebrew| homebrew.taps.iter().map(String::as_str).collect())
+                    .unwrap_or_default();
+                let configured_formulae: HashSet<&str> = config
+                    .homebrew
+                    .as_ref()
+                    .map(|homebrew| {
+                        homebrew
+                            .explicitly_installed_formulae
+                            .iter()
+                            .map(String::as_str)
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                let configured_non_app_casks: HashSet<&str> = config
+                    .homebrew
+                    .as_ref()
+                    .map(|homebrew| homebrew.non_app_casks.iter().map(String::as_str).collect())
                     .unwrap_or_default();
                 let all_configured_casks: HashSet<&str> = configured_casks
                     .union(&configured_non_app_casks)
@@ -352,6 +368,36 @@ fn main() -> Result<()> {
                         sections.push((
                             "Installed Homebrew taps not in config",
                             installed_taps_not_configured,
+                        ));
+                    }
+                }
+
+                {
+                    let mut configured_formulae_not_installed: Vec<String> = configured_formulae
+                        .iter()
+                        .filter(|&formula_name| !installed_formulae.contains(*formula_name))
+                        .map(|&formula_name| formula_name.to_owned())
+                        .collect();
+                    configured_formulae_not_installed.sort();
+                    if !configured_formulae_not_installed.is_empty() {
+                        sections.push((
+                            "Configured Homebrew formulae not explicitly installed",
+                            configured_formulae_not_installed,
+                        ));
+                    }
+                }
+
+                {
+                    let mut installed_formulae_not_configured: Vec<String> = installed_formulae
+                        .iter()
+                        .filter(|formula_name| !configured_formulae.contains(formula_name.as_str()))
+                        .cloned()
+                        .collect();
+                    installed_formulae_not_configured.sort();
+                    if !installed_formulae_not_configured.is_empty() {
+                        sections.push((
+                            "Explicitly installed Homebrew formulae not in config",
+                            installed_formulae_not_configured,
                         ));
                     }
                 }

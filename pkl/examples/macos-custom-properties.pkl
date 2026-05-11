@@ -42,6 +42,9 @@ local myApps: Listing<ExtendedManualApp | ExtendedCask> = new {
 
 mac {
   homebrew = new Homebrew {
+    explicitlyInstalledFormulae {
+      "ffmpeg"
+    }
     nonAppCasks {
       "font-fira-code"
     }

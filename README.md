@@ -45,6 +45,9 @@ amends "package://github.com/nihaals/uplare/releases/download/v0.0.0/uplare-pkl@
 
 mac {
   homebrew = new Homebrew {
+    explicitlyInstalledFormulae {
+      "ffmpeg"
+    }
     nonAppCasks {
       "font-fira-code"
     }

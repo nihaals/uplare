@@ -4,6 +4,9 @@ examples {
     {
       "homebrew": {
         "taps": [],
+        "explicitlyInstalledFormulae": [
+          "ffmpeg"
+        ],
         "nonAppCasks": [
           "font-fira-code"
         ]
@@ -33,6 +36,9 @@ examples {
     {
       "homebrew": {
         "taps": [],
+        "explicitlyInstalledFormulae": [
+          "ffmpeg"
+        ],
         "nonAppCasks": [
           "font-fira-code"
         ]

@@ -209,11 +209,6 @@ facts {
 
   // -- Homebrew --
 
-  ["allows homebrew with no non-app casks"] {
-    noConstraintViolation(new MacOs.Homebrew {
-      nonAppCasks {}
-    })
-  }
   ["allows homebrew with no taps"] {
     noConstraintViolation(new MacOs.Homebrew {
       taps {}
@@ -249,6 +244,53 @@ facts {
       }
     })
   }
+  ["allows homebrew with explicitly installed formulae"] {
+    noConstraintViolation(new MacOs.Homebrew {
+      explicitlyInstalledFormulae {
+        "xz"
+        "ca-certificates"
+        "hdrhistogram_c"
+        "homebrew/core/openssl@3"
+      }
+    })
+  }
+  ["disallows invalid explicitly installed formula"] {
+    constraintViolation(new MacOs.Homebrew {
+      explicitlyInstalledFormulae {
+        "hdrhistogram__c"
+      }
+    })
+    constraintViolation(new MacOs.Homebrew {
+      explicitlyInstalledFormulae {
+        "ca-certificates!"
+      }
+    })
+  }
+  ["disallows duplicate explicitly installed formulae"] {
+    constraintViolation(new MacOs.Homebrew {
+      explicitlyInstalledFormulae {
+        "xz"
+        "xz"
+      }
+    })
+    constraintViolation(new MacOs.Homebrew {
+      explicitlyInstalledFormulae {
+        "homebrew/core/openssl@3"
+        "openssl@3"
+      }
+    })
+    constraintViolation(new MacOs.Homebrew {
+      explicitlyInstalledFormulae {
+        "homebrew/core/openssl@3"
+        "user/repo/openssl@3"
+      }
+    })
+  }
+  ["allows homebrew with no non-app casks"] {
+    noConstraintViolation(new MacOs.Homebrew {
+      nonAppCasks {}
+    })
+  }
   ["allows homebrew with non-app casks"] {
     noConstraintViolation(new MacOs.Homebrew {
       nonAppCasks {
@@ -270,6 +312,18 @@ facts {
       nonAppCasks {
         "font-fira-code"
         "font-fira-code"
+      }
+    })
+    constraintViolation(new MacOs.Homebrew {
+      nonAppCasks {
+        "homebrew/cask/font-fira-code"
+        "font-fira-code"
+      }
+    })
+    constraintViolation(new MacOs.Homebrew {
+      nonAppCasks {
+        "homebrew/cask/font-fira-code"
+        "user/repo/font-fira-code"
       }
     })
   }

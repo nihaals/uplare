@@ -41,6 +41,33 @@ pub fn get_installed_casks() -> Result<HashSet<String>> {
     })
 }
 
+pub fn get_explicitly_installed_formulae() -> Result<HashSet<String>> {
+    let output = Command::new("brew")
+        .args(["list", "--installed-on-request", "--full-name"])
+        .output()
+        .context("Failed to run `brew list --installed-on-request --full-name`")?;
+
+    if !output.status.success() {
+        bail!("`brew list --installed-on-request --full-name` failed with non-zero exit code");
+    }
+
+    let stdout = String::from_utf8(output.stdout)
+        .context("`brew list --installed-on-request --full-name` output was not valid UTF-8")?;
+    Ok({
+        stdout
+            .lines()
+            .filter_map(|line| {
+                let trimmed = line.trim();
+                if trimmed.is_empty() {
+                    None
+                } else {
+                    Some(trimmed.to_owned())
+                }
+            })
+            .collect()
+    })
+}
+
 pub fn get_taps() -> Result<HashSet<String>> {
     let output = Command::new("brew")
         .arg("tap")
