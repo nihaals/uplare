@@ -8,7 +8,161 @@ local function constraintViolation(value: Any): Boolean =
   module.catchOrNull(() -> value.toString())?.startsWith("Type constraint ") ?? false
 
 facts {
-  // -- App path validation (BaseMacApp) --
+  // -- Homebrew.taps --
+
+  ["allows homebrew with no taps"] {
+    noConstraintViolation(new MacOs.Homebrew {
+      taps {}
+    })
+  }
+  ["allows homebrew with taps"] {
+    noConstraintViolation(new MacOs.Homebrew {
+      taps {
+        "homebrew/cask"
+        "homebrew/core"
+      }
+    })
+  }
+  ["disallows duplicate taps"] {
+    constraintViolation(new MacOs.Homebrew {
+      taps {
+        "homebrew/cask"
+        "homebrew/cask"
+      }
+    })
+  }
+  ["disallows tap with no slash"] {
+    constraintViolation(new MacOs.Homebrew {
+      taps {
+        "homebrew"
+      }
+    })
+  }
+  ["disallows tap with two slashes"] {
+    constraintViolation(new MacOs.Homebrew {
+      taps {
+        "homebrew/cask/fonts"
+      }
+    })
+  }
+
+  // -- Homebrew.explicitlyInstalledFormulae --
+
+  ["allows homebrew with explicitly installed formulae"] {
+    noConstraintViolation(new MacOs.Homebrew {
+      explicitlyInstalledFormulae {
+        "xz"
+        "ca-certificates"
+        "hdrhistogram_c"
+        "python@3.14"
+        "llama.cpp"
+        "homebrew/core/openssl@3"
+      }
+    })
+  }
+  ["disallows invalid explicitly installed formula"] {
+    constraintViolation(new MacOs.Homebrew {
+      explicitlyInstalledFormulae {
+        "hdrhistogram__c"
+      }
+    })
+    constraintViolation(new MacOs.Homebrew {
+      explicitlyInstalledFormulae {
+        "ca-certificates!"
+      }
+    })
+    constraintViolation(new MacOs.Homebrew {
+      explicitlyInstalledFormulae {
+        "python.3@14"
+      }
+    })
+    constraintViolation(new MacOs.Homebrew {
+      explicitlyInstalledFormulae {
+        "@python"
+      }
+    })
+    constraintViolation(new MacOs.Homebrew {
+      explicitlyInstalledFormulae {
+        "python@"
+      }
+    })
+    constraintViolation(new MacOs.Homebrew {
+      explicitlyInstalledFormulae {
+        "python@@3"
+      }
+    })
+    constraintViolation(new MacOs.Homebrew {
+      explicitlyInstalledFormulae {
+        "python@3@14"
+      }
+    })
+  }
+  ["disallows duplicate explicitly installed formulae"] {
+    constraintViolation(new MacOs.Homebrew {
+      explicitlyInstalledFormulae {
+        "xz"
+        "xz"
+      }
+    })
+    constraintViolation(new MacOs.Homebrew {
+      explicitlyInstalledFormulae {
+        "homebrew/core/openssl@3"
+        "openssl@3"
+      }
+    })
+    constraintViolation(new MacOs.Homebrew {
+      explicitlyInstalledFormulae {
+        "homebrew/core/openssl@3"
+        "user/repo/openssl@3"
+      }
+    })
+  }
+
+  // -- Homebrew.nonAppCasks --
+
+  ["allows homebrew with no non-app casks"] {
+    noConstraintViolation(new MacOs.Homebrew {
+      nonAppCasks {}
+    })
+  }
+  ["allows homebrew with non-app casks"] {
+    noConstraintViolation(new MacOs.Homebrew {
+      nonAppCasks {
+        "font-fira-code"
+        "macfuse"
+        "homebrew/cask/font-fira-code-nerd-font"
+      }
+    })
+  }
+  ["disallows invalid non-app cask name"] {
+    constraintViolation(new MacOs.Homebrew {
+      nonAppCasks {
+        "font-fira-code!"
+      }
+    })
+  }
+  ["disallows duplicate non-app cask names"] {
+    constraintViolation(new MacOs.Homebrew {
+      nonAppCasks {
+        "font-fira-code"
+        "font-fira-code"
+      }
+    })
+    constraintViolation(new MacOs.Homebrew {
+      nonAppCasks {
+        "homebrew/cask/font-fira-code"
+        "font-fira-code"
+      }
+    })
+    constraintViolation(new MacOs.Homebrew {
+      nonAppCasks {
+        "homebrew/cask/font-fira-code"
+        "user/repo/font-fira-code"
+      }
+    })
+  }
+
+  // -- BaseMacApp.appPaths --
 
   ["allows valid app path"] {
     noConstraintViolation(new MacOs.HomebrewCask {
@@ -211,154 +365,6 @@ facts {
       caskName = "homebrew/cask/fonts/font-fira-code"
       appPaths {
         "/Applications/Font Fira Code.app"
-      }
-    })
-  }
-
-  // -- Homebrew --
-
-  ["allows homebrew with no taps"] {
-    noConstraintViolation(new MacOs.Homebrew {
-      taps {}
-    })
-  }
-  ["allows homebrew with taps"] {
-    noConstraintViolation(new MacOs.Homebrew {
-      taps {
-        "homebrew/cask"
-        "homebrew/core"
-      }
-    })
-  }
-  ["disallows duplicate taps"] {
-    constraintViolation(new MacOs.Homebrew {
-      taps {
-        "homebrew/cask"
-        "homebrew/cask"
-      }
-    })
-  }
-  ["disallows tap with no slash"] {
-    constraintViolation(new MacOs.Homebrew {
-      taps {
-        "homebrew"
-      }
-    })
-  }
-  ["disallows tap with two slashes"] {
-    constraintViolation(new MacOs.Homebrew {
-      taps {
-        "homebrew/cask/fonts"
-      }
-    })
-  }
-  ["allows homebrew with explicitly installed formulae"] {
-    noConstraintViolation(new MacOs.Homebrew {
-      explicitlyInstalledFormulae {
-        "xz"
-        "ca-certificates"
-        "hdrhistogram_c"
-        "python@3.14"
-        "llama.cpp"
-        "homebrew/core/openssl@3"
-      }
-    })
-  }
-  ["disallows invalid explicitly installed formula"] {
-    constraintViolation(new MacOs.Homebrew {
-      explicitlyInstalledFormulae {
-        "hdrhistogram__c"
-      }
-    })
-    constraintViolation(new MacOs.Homebrew {
-      explicitlyInstalledFormulae {
-        "ca-certificates!"
-      }
-    })
-    constraintViolation(new MacOs.Homebrew {
-      explicitlyInstalledFormulae {
-        "python.3@14"
-      }
-    })
-    constraintViolation(new MacOs.Homebrew {
-      explicitlyInstalledFormulae {
-        "@python"
-      }
-    })
-    constraintViolation(new MacOs.Homebrew {
-      explicitlyInstalledFormulae {
-        "python@"
-      }
-    })
-    constraintViolation(new MacOs.Homebrew {
-      explicitlyInstalledFormulae {
-        "python@@3"
-      }
-    })
-    constraintViolation(new MacOs.Homebrew {
-      explicitlyInstalledFormulae {
-        "python@3@14"
-      }
-    })
-  }
-  ["disallows duplicate explicitly installed formulae"] {
-    constraintViolation(new MacOs.Homebrew {
-      explicitlyInstalledFormulae {
-        "xz"
-        "xz"
-      }
-    })
-    constraintViolation(new MacOs.Homebrew {
-      explicitlyInstalledFormulae {
-        "homebrew/core/openssl@3"
-        "openssl@3"
-      }
-    })
-    constraintViolation(new MacOs.Homebrew {
-      explicitlyInstalledFormulae {
-        "homebrew/core/openssl@3"
-        "user/repo/openssl@3"
-      }
-    })
-  }
-  ["allows homebrew with no non-app casks"] {
-    noConstraintViolation(new MacOs.Homebrew {
-      nonAppCasks {}
-    })
-  }
-  ["allows homebrew with non-app casks"] {
-    noConstraintViolation(new MacOs.Homebrew {
-      nonAppCasks {
-        "font-fira-code"
-        "macfuse"
-        "homebrew/cask/font-fira-code-nerd-font"
-      }
-    })
-  }
-  ["disallows invalid non-app cask name"] {
-    constraintViolation(new MacOs.Homebrew {
-      nonAppCasks {
-        "font-fira-code!"
-      }
-    })
-  }
-  ["disallows duplicate non-app cask names"] {
-    constraintViolation(new MacOs.Homebrew {
-      nonAppCasks {
-        "font-fira-code"
-        "font-fira-code"
-      }
-    })
-    constraintViolation(new MacOs.Homebrew {
-      nonAppCasks {
-        "homebrew/cask/font-fira-code"
-        "font-fira-code"
-      }
-    })
-    constraintViolation(new MacOs.Homebrew {
-      nonAppCasks {
-        "homebrew/cask/font-fira-code"
-        "user/repo/font-fira-code"
       }
     })
   }

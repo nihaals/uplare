@@ -40,6 +40,145 @@ fn parse_charge_limit_output(stdout: &str) -> Result<Option<u8>> {
     }
 }
 
+pub struct UserSteamSettings {
+    pub developer_mode: bool,
+}
+
+/// Get settings from `~/.steam/steam/config/config.vdf`
+pub fn get_user_steam_settings() -> Result<UserSteamSettings> {
+    let home_dir: PathBuf = env::var("HOME")
+        .context("HOME environment variable not set")?
+        .into();
+    let config_path = home_dir.join(".steam/steam/config/config.vdf");
+    let config = fs::read_to_string(&config_path)
+        .with_context(|| format!("Failed to read `{}`", config_path.display()))?;
+    parse_user_steam_settings(&config)
+        .with_context(|| format!("Failed to parse `{}`", config_path.display()))
+}
+
+fn parse_user_steam_settings(config: &str) -> Result<UserSteamSettings> {
+    let vdf = steam_vdf_parser::parse_text(config).context("Config is not valid VDF")?;
+    let raw_developer_mode = vdf
+        .get_str(&["developer", "DevModeEnabled"])
+        .context("missing `developer/DevModeEnabled`")?;
+
+    let developer_mode = match raw_developer_mode {
+        "0" => false,
+        "1" => true,
+        _ => bail!(
+            "found invalid `developer/DevModeEnabled` value `{raw_developer_mode}`; expected `0` or `1`"
+        ),
+    };
+
+    Ok(UserSteamSettings { developer_mode })
+}
+
+/// Resolves `~/.local/share/Steam/userdata/*/config/localconfig.vdf`
+pub fn get_steam_user_settings_ids() -> Result<HashSet<String>> {
+    let home_dir: PathBuf = env::var("HOME")
+        .context("HOME environment variable not set")?
+        .into();
+    let userdata_dir = home_dir.join(".local/share/Steam/userdata");
+    let mut steam_account_ids = HashSet::new();
+    for entry in fs::read_dir(&userdata_dir)
+        .with_context(|| format!("Failed to read `{}`", userdata_dir.display()))?
+    {
+        let entry = entry
+            .with_context(|| format!("Failed to read entry in `{}`", userdata_dir.display()))?;
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+
+        let localconfig_path = path.join("config/localconfig.vdf");
+        if !localconfig_path.is_file() {
+            continue;
+        }
+
+        let Ok(steam_account_id) = entry.file_name().into_string() else {
+            continue;
+        };
+        if !steam_account_ids.insert(steam_account_id.clone()) {
+            bail!("found duplicate Steam account ID `{steam_account_id}`");
+        }
+    }
+
+    Ok(steam_account_ids)
+}
+
+pub struct SteamUserSettings {
+    pub sign_into_friends: bool,
+}
+
+/// Get settings from `~/.local/share/Steam/userdata/*/config/localconfig.vdf`
+pub fn get_steam_user_settings(steam_account_id: &str) -> Result<SteamUserSettings> {
+    let home_dir: PathBuf = env::var("HOME")
+        .context("HOME environment variable not set")?
+        .into();
+    let config_path = home_dir.join(format!(
+        ".local/share/Steam/userdata/{steam_account_id}/config/localconfig.vdf"
+    ));
+    let config = fs::read_to_string(&config_path)
+        .with_context(|| format!("Failed to read `{}`", config_path.display()))?;
+    parse_steam_user_settings(&config)
+        .with_context(|| format!("Failed to parse `{}`", config_path.display()))
+}
+
+fn parse_steam_user_settings(config: &str) -> Result<SteamUserSettings> {
+    let vdf = steam_vdf_parser::parse_text(config).context("Config is not valid VDF")?;
+    let raw_sign_into_friends = vdf
+        .get_str(&["friends", "SignIntoFriends"])
+        .context("missing `friends/SignIntoFriends`")?;
+
+    let sign_into_friends = match raw_sign_into_friends {
+        "0" => false,
+        "1" => true,
+        _ => bail!(
+            "found invalid `friends/SignIntoFriends` value `{raw_sign_into_friends}`; expected `0` or `1`"
+        ),
+    };
+
+    Ok(SteamUserSettings { sign_into_friends })
+}
+
+pub struct SteamClientUserSettings {
+    pub twenty_four_hour_clock: bool,
+}
+
+/// Get settings from `~/.local/share/Steam/userdata/*/7/remote/sharedconfig.vdf`
+pub fn get_steam_client_user_settings(steam_account_id: &str) -> Result<SteamClientUserSettings> {
+    let home_dir: PathBuf = env::var("HOME")
+        .context("HOME environment variable not set")?
+        .into();
+    let config_path = home_dir.join(format!(
+        ".local/share/Steam/userdata/{steam_account_id}/7/remote/sharedconfig.vdf"
+    ));
+    let config = fs::read_to_string(&config_path)
+        .with_context(|| format!("Failed to read `{}`", config_path.display()))?;
+    parse_steam_client_user_settings(&config)
+        .with_context(|| format!("Failed to parse `{}`", config_path.display()))
+}
+
+#[derive(Deserialize)]
+struct RawSteamClientFriendsUiSettings {
+    #[serde(rename = "b24HourClock")]
+    twenty_four_hour_clock: bool,
+}
+
+fn parse_steam_client_user_settings(config: &str) -> Result<SteamClientUserSettings> {
+    let vdf = steam_vdf_parser::parse_text(config).context("Config is not valid VDF")?;
+    let raw_friends_ui_json = vdf
+        .get_str(&["Software", "Valve", "Steam", "friendsui", "FriendsUIJSON"])
+        .context("missing `Software/Valve/Steam/friendsui/FriendsUIJSON`")?;
+    let friends_ui_settings: RawSteamClientFriendsUiSettings =
+        serde_json::from_str(raw_friends_ui_json)
+            .context("`Software/Valve/Steam/friendsui/FriendsUIJSON` is not valid JSON")?;
+
+    Ok(SteamClientUserSettings {
+        twenty_four_hour_clock: friends_ui_settings.twenty_four_hour_clock,
+    })
+}
+
 pub fn get_installed_flatpak_apps() -> Result<HashSet<String>> {
     let output = Command::new("flatpak")
         .args(["list", "--app", "--columns=application"])
@@ -387,145 +526,6 @@ fn parse_kde_plasma_launchers(raw_launchers: &str) -> Result<Vec<String>> {
     Ok(launchers)
 }
 
-pub struct UserSteamSettings {
-    pub developer_mode: bool,
-}
-
-/// Get settings from `~/.steam/steam/config/config.vdf`
-pub fn get_user_steam_settings() -> Result<UserSteamSettings> {
-    let home_dir: PathBuf = env::var("HOME")
-        .context("HOME environment variable not set")?
-        .into();
-    let config_path = home_dir.join(".steam/steam/config/config.vdf");
-    let config = fs::read_to_string(&config_path)
-        .with_context(|| format!("Failed to read `{}`", config_path.display()))?;
-    parse_user_steam_settings(&config)
-        .with_context(|| format!("Failed to parse `{}`", config_path.display()))
-}
-
-fn parse_user_steam_settings(config: &str) -> Result<UserSteamSettings> {
-    let vdf = steam_vdf_parser::parse_text(config).context("Config is not valid VDF")?;
-    let raw_developer_mode = vdf
-        .get_str(&["developer", "DevModeEnabled"])
-        .context("missing `developer/DevModeEnabled`")?;
-
-    let developer_mode = match raw_developer_mode {
-        "0" => false,
-        "1" => true,
-        _ => bail!(
-            "found invalid `developer/DevModeEnabled` value `{raw_developer_mode}`; expected `0` or `1`"
-        ),
-    };
-
-    Ok(UserSteamSettings { developer_mode })
-}
-
-/// Resolves `~/.local/share/Steam/userdata/*/config/localconfig.vdf`
-pub fn get_steam_user_settings_ids() -> Result<HashSet<String>> {
-    let home_dir: PathBuf = env::var("HOME")
-        .context("HOME environment variable not set")?
-        .into();
-    let userdata_dir = home_dir.join(".local/share/Steam/userdata");
-    let mut steam_account_ids = HashSet::new();
-    for entry in fs::read_dir(&userdata_dir)
-        .with_context(|| format!("Failed to read `{}`", userdata_dir.display()))?
-    {
-        let entry = entry
-            .with_context(|| format!("Failed to read entry in `{}`", userdata_dir.display()))?;
-        let path = entry.path();
-        if !path.is_dir() {
-            continue;
-        }
-
-        let localconfig_path = path.join("config/localconfig.vdf");
-        if !localconfig_path.is_file() {
-            continue;
-        }
-
-        let Ok(steam_account_id) = entry.file_name().into_string() else {
-            continue;
-        };
-        if !steam_account_ids.insert(steam_account_id.clone()) {
-            bail!("found duplicate Steam account ID `{steam_account_id}`");
-        }
-    }
-
-    Ok(steam_account_ids)
-}
-
-pub struct SteamUserSettings {
-    pub sign_into_friends: bool,
-}
-
-/// Get settings from `~/.local/share/Steam/userdata/*/config/localconfig.vdf`
-pub fn get_steam_user_settings(steam_account_id: &str) -> Result<SteamUserSettings> {
-    let home_dir: PathBuf = env::var("HOME")
-        .context("HOME environment variable not set")?
-        .into();
-    let config_path = home_dir.join(format!(
-        ".local/share/Steam/userdata/{steam_account_id}/config/localconfig.vdf"
-    ));
-    let config = fs::read_to_string(&config_path)
-        .with_context(|| format!("Failed to read `{}`", config_path.display()))?;
-    parse_steam_user_settings(&config)
-        .with_context(|| format!("Failed to parse `{}`", config_path.display()))
-}
-
-fn parse_steam_user_settings(config: &str) -> Result<SteamUserSettings> {
-    let vdf = steam_vdf_parser::parse_text(config).context("Config is not valid VDF")?;
-    let raw_sign_into_friends = vdf
-        .get_str(&["friends", "SignIntoFriends"])
-        .context("missing `friends/SignIntoFriends`")?;
-
-    let sign_into_friends = match raw_sign_into_friends {
-        "0" => false,
-        "1" => true,
-        _ => bail!(
-            "found invalid `friends/SignIntoFriends` value `{raw_sign_into_friends}`; expected `0` or `1`"
-        ),
-    };
-
-    Ok(SteamUserSettings { sign_into_friends })
-}
-
-pub struct SteamClientUserSettings {
-    pub twenty_four_hour_clock: bool,
-}
-
-/// Get settings from `~/.local/share/Steam/userdata/*/7/remote/sharedconfig.vdf`
-pub fn get_steam_client_user_settings(steam_account_id: &str) -> Result<SteamClientUserSettings> {
-    let home_dir: PathBuf = env::var("HOME")
-        .context("HOME environment variable not set")?
-        .into();
-    let config_path = home_dir.join(format!(
-        ".local/share/Steam/userdata/{steam_account_id}/7/remote/sharedconfig.vdf"
-    ));
-    let config = fs::read_to_string(&config_path)
-        .with_context(|| format!("Failed to read `{}`", config_path.display()))?;
-    parse_steam_client_user_settings(&config)
-        .with_context(|| format!("Failed to parse `{}`", config_path.display()))
-}
-
-#[derive(Deserialize)]
-struct RawSteamClientFriendsUiSettings {
-    #[serde(rename = "b24HourClock")]
-    twenty_four_hour_clock: bool,
-}
-
-fn parse_steam_client_user_settings(config: &str) -> Result<SteamClientUserSettings> {
-    let vdf = steam_vdf_parser::parse_text(config).context("Config is not valid VDF")?;
-    let raw_friends_ui_json = vdf
-        .get_str(&["Software", "Valve", "Steam", "friendsui", "FriendsUIJSON"])
-        .context("missing `Software/Valve/Steam/friendsui/FriendsUIJSON`")?;
-    let friends_ui_settings: RawSteamClientFriendsUiSettings =
-        serde_json::from_str(raw_friends_ui_json)
-            .context("`Software/Valve/Steam/friendsui/FriendsUIJSON` is not valid JSON")?;
-
-    Ok(SteamClientUserSettings {
-        twenty_four_hour_clock: friends_ui_settings.twenty_four_hour_clock,
-    })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -564,258 +564,6 @@ mod tests {
     #[test]
     fn test_parse_charge_limit_output_trailing_characters() {
         assert!(parse_charge_limit_output("Max charge level: 75\na\n").is_err());
-    }
-
-    #[test]
-    fn test_parse_installed_flatpak_apps_output_valid() {
-        assert_eq!(
-            parse_installed_flatpak_apps_output(
-                "com.github.Matoking.protontricks\norg.mozilla.firefox\n"
-            )
-            .unwrap(),
-            HashSet::from([
-                "com.github.Matoking.protontricks".to_owned(),
-                "org.mozilla.firefox".to_owned(),
-            ]),
-        );
-    }
-
-    #[test]
-    fn test_parse_installed_flatpak_apps_output_empty() {
-        assert_eq!(
-            parse_installed_flatpak_apps_output("\n").unwrap(),
-            HashSet::<String>::new(),
-        );
-    }
-
-    #[test]
-    fn test_parse_installed_flatpak_apps_output_duplicate_application_id() {
-        assert!(
-            parse_installed_flatpak_apps_output(
-                "com.github.Matoking.protontricks\ncom.github.Matoking.protontricks\n",
-            )
-            .is_err()
-        );
-    }
-
-    #[test]
-    fn test_parse_decky_settings_valid() {
-        assert_eq!(
-            parse_decky_settings(
-                r#"{
-                    "branch": 0,
-                    "store": 1,
-                    "developer.enabled": true,
-                    "notificationSettings": {
-                        "deckyUpdates": false,
-                        "pluginUpdates": true
-                    },
-                    "disabled_plugins": ["a", "a", "b"]
-                }"#,
-            )
-            .unwrap(),
-            DeckySettings {
-                update_channel: UpdateChannel::Stable,
-                store_channel: StoreChannel::Prerelease,
-                decky_update_notifications: false,
-                plugins_update_notifications: true,
-                developer_mode: true,
-                disabled_plugins: HashSet::from(["a".to_owned(), "b".to_owned()]),
-            },
-        );
-    }
-
-    #[test]
-    fn test_parse_decky_settings_invalid_branch() {
-        assert!(
-            parse_decky_settings(
-                r#"{
-                    "branch": 2,
-                    "store": 0,
-                    "developer.enabled": true,
-                    "notificationSettings": {
-                        "deckyUpdates": false,
-                        "pluginUpdates": true
-                    },
-                    "disabled_plugins": []
-                }"#,
-            )
-            .is_err(),
-        );
-    }
-
-    #[test]
-    fn test_parse_decky_settings_invalid_store() {
-        assert!(
-            parse_decky_settings(
-                r#"{
-                    "branch": 0,
-                    "store": 2,
-                    "developer.enabled": true,
-                    "notificationSettings": {
-                        "deckyUpdates": false,
-                        "pluginUpdates": true
-                    },
-                    "disabled_plugins": []
-                }"#,
-            )
-            .is_err(),
-        );
-    }
-
-    #[test]
-    fn test_parse_decky_plugin_manifest_valid() {
-        assert_eq!(
-            parse_decky_plugin_manifest(
-                r#"{
-                    "name": "ProtonDB Badges"
-                }"#,
-            )
-            .unwrap(),
-            "ProtonDB Badges",
-        );
-    }
-
-    #[test]
-    fn test_parse_decky_plugin_manifest_missing_name() {
-        assert!(
-            parse_decky_plugin_manifest(
-                r#"{
-                    "flags": []
-                }"#,
-            )
-            .is_err(),
-        );
-    }
-
-    #[test]
-    fn test_parse_enabled_systemd_units_output_valid() {
-        assert_eq!(
-            parse_enabled_systemd_units_output(
-                "UNIT FILE                          STATE   WHATEVER\nbluetooth.service                  enabled disabled\nsystemd-timesyncd.service          enabled nonsense\n\n2 unit files listed.\n",
-            )
-            .unwrap(),
-            HashSet::from([
-                "bluetooth.service".to_owned(),
-                "systemd-timesyncd.service".to_owned(),
-            ]),
-        );
-    }
-
-    #[test]
-    fn test_parse_enabled_systemd_units_output_missing_empty_line_before_count() {
-        assert!(
-            parse_enabled_systemd_units_output(
-                "UNIT FILE                          STATE   WHATEVER\nbluetooth.service                  enabled disabled\nsystemd-timesyncd.service          enabled nonsense\n2 unit files listed.\n",
-            )
-            .is_err(),
-        );
-    }
-
-    #[test]
-    fn test_parse_enabled_systemd_units_output_empty() {
-        assert_eq!(
-            parse_enabled_systemd_units_output(
-                "UNIT FILE                          STATE   PRESET\n\n0 unit files listed.\n",
-            )
-            .unwrap(),
-            HashSet::<String>::new(),
-        );
-    }
-
-    #[test]
-    fn test_parse_enabled_systemd_units_output_invalid_header() {
-        assert!(
-            parse_enabled_systemd_units_output(
-                "UNIT FILE                          STATUS  PRESET\navahi-daemon.service               enabled disabled\n\n1 unit files listed.\n",
-            )
-            .is_err(),
-        );
-    }
-
-    #[test]
-    fn test_parse_enabled_systemd_units_output_invalid_state() {
-        assert!(
-            parse_enabled_systemd_units_output(
-                "UNIT FILE                          STATE   PRESET\navahi-daemon.service               disabled disabled\n\n1 unit files listed.\n",
-            )
-            .is_err(),
-        );
-    }
-
-    #[test]
-    fn test_parse_enabled_systemd_units_output_ignores_trailing_columns() {
-        assert_eq!(
-            parse_enabled_systemd_units_output(
-                "UNIT FILE                          STATE   PRESET\navahi-daemon.service               enabled static\n\n1 unit files listed.\n",
-            )
-            .unwrap(),
-            HashSet::from(["avahi-daemon.service".to_owned()]),
-        );
-    }
-
-    #[test]
-    fn test_parse_enabled_systemd_units_output_count_mismatch() {
-        assert!(
-            parse_enabled_systemd_units_output(
-                "UNIT FILE                          STATE   PRESET\navahi-daemon.service               enabled disabled\n\n2 unit files listed.\n",
-            )
-            .is_err(),
-        );
-    }
-
-    #[test]
-    fn test_parse_enabled_systemd_units_output_extra_lines_after_count() {
-        assert!(
-            parse_enabled_systemd_units_output(
-                "UNIT FILE                          STATE   PRESET\navahi-daemon.service               enabled disabled\n\n1 unit files listed.\nextra\n",
-            )
-            .is_err(),
-        );
-    }
-
-    #[test]
-    fn test_parse_enabled_systemd_units_output_duplicate_unit_file() {
-        assert!(
-            parse_enabled_systemd_units_output(
-                "UNIT FILE                          STATE   PRESET\navahi-daemon.service               enabled disabled\navahi-daemon.service               enabled enabled\n\n2 unit files listed.\n",
-            )
-            .is_err(),
-        );
-    }
-
-    #[test]
-    fn test_parse_kde_plasma_dock_apps_valid() {
-        assert_eq!(
-            parse_kde_plasma_desktop_config(
-                "[Containments][1][Applets][2][Configuration][General]\nlaunchers=applications:systemsettings.desktop,applications:org.kde.discover.desktop,preferred://filemanager,preferred://browser\n",
-            )
-            .unwrap(),
-            vec![
-                "applications:systemsettings.desktop".to_owned(),
-                "applications:org.kde.discover.desktop".to_owned(),
-                "preferred://filemanager".to_owned(),
-                "preferred://browser".to_owned(),
-            ],
-        );
-    }
-
-    #[test]
-    fn test_parse_kde_plasma_dock_apps_missing_launchers() {
-        assert!(parse_kde_plasma_desktop_config("[Containments][1]\n").is_err());
-    }
-
-    #[test]
-    fn test_parse_kde_plasma_dock_apps_multiple_launchers_lines() {
-        assert!(parse_kde_plasma_desktop_config("launchers=applications:org.kde.discover.desktop\nlaunchers=applications:systemsettings.desktop\n").is_err());
-    }
-
-    #[test]
-    fn test_parse_kde_plasma_dock_apps_empty_launchers() {
-        assert_eq!(
-            parse_kde_plasma_desktop_config("launchers=\n").unwrap(),
-            Vec::<String>::new()
-        );
     }
 
     #[test]
@@ -1076,6 +824,258 @@ mod tests {
                 "\n",
             ))
             .is_err(),
+        );
+    }
+
+    #[test]
+    fn test_parse_installed_flatpak_apps_output_valid() {
+        assert_eq!(
+            parse_installed_flatpak_apps_output(
+                "com.github.Matoking.protontricks\norg.mozilla.firefox\n"
+            )
+            .unwrap(),
+            HashSet::from([
+                "com.github.Matoking.protontricks".to_owned(),
+                "org.mozilla.firefox".to_owned(),
+            ]),
+        );
+    }
+
+    #[test]
+    fn test_parse_installed_flatpak_apps_output_empty() {
+        assert_eq!(
+            parse_installed_flatpak_apps_output("\n").unwrap(),
+            HashSet::<String>::new(),
+        );
+    }
+
+    #[test]
+    fn test_parse_installed_flatpak_apps_output_duplicate_application_id() {
+        assert!(
+            parse_installed_flatpak_apps_output(
+                "com.github.Matoking.protontricks\ncom.github.Matoking.protontricks\n",
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn test_parse_decky_settings_valid() {
+        assert_eq!(
+            parse_decky_settings(
+                r#"{
+                    "branch": 0,
+                    "store": 1,
+                    "developer.enabled": true,
+                    "notificationSettings": {
+                        "deckyUpdates": false,
+                        "pluginUpdates": true
+                    },
+                    "disabled_plugins": ["a", "a", "b"]
+                }"#,
+            )
+            .unwrap(),
+            DeckySettings {
+                update_channel: UpdateChannel::Stable,
+                store_channel: StoreChannel::Prerelease,
+                decky_update_notifications: false,
+                plugins_update_notifications: true,
+                developer_mode: true,
+                disabled_plugins: HashSet::from(["a".to_owned(), "b".to_owned()]),
+            },
+        );
+    }
+
+    #[test]
+    fn test_parse_decky_settings_invalid_branch() {
+        assert!(
+            parse_decky_settings(
+                r#"{
+                    "branch": 2,
+                    "store": 0,
+                    "developer.enabled": true,
+                    "notificationSettings": {
+                        "deckyUpdates": false,
+                        "pluginUpdates": true
+                    },
+                    "disabled_plugins": []
+                }"#,
+            )
+            .is_err(),
+        );
+    }
+
+    #[test]
+    fn test_parse_decky_settings_invalid_store() {
+        assert!(
+            parse_decky_settings(
+                r#"{
+                    "branch": 0,
+                    "store": 2,
+                    "developer.enabled": true,
+                    "notificationSettings": {
+                        "deckyUpdates": false,
+                        "pluginUpdates": true
+                    },
+                    "disabled_plugins": []
+                }"#,
+            )
+            .is_err(),
+        );
+    }
+
+    #[test]
+    fn test_parse_decky_plugin_manifest_valid() {
+        assert_eq!(
+            parse_decky_plugin_manifest(
+                r#"{
+                    "name": "ProtonDB Badges"
+                }"#,
+            )
+            .unwrap(),
+            "ProtonDB Badges",
+        );
+    }
+
+    #[test]
+    fn test_parse_decky_plugin_manifest_missing_name() {
+        assert!(
+            parse_decky_plugin_manifest(
+                r#"{
+                    "flags": []
+                }"#,
+            )
+            .is_err(),
+        );
+    }
+
+    #[test]
+    fn test_parse_enabled_systemd_units_output_valid() {
+        assert_eq!(
+            parse_enabled_systemd_units_output(
+                "UNIT FILE                          STATE   WHATEVER\nbluetooth.service                  enabled disabled\nsystemd-timesyncd.service          enabled nonsense\n\n2 unit files listed.\n",
+            )
+            .unwrap(),
+            HashSet::from([
+                "bluetooth.service".to_owned(),
+                "systemd-timesyncd.service".to_owned(),
+            ]),
+        );
+    }
+
+    #[test]
+    fn test_parse_enabled_systemd_units_output_missing_empty_line_before_count() {
+        assert!(
+            parse_enabled_systemd_units_output(
+                "UNIT FILE                          STATE   WHATEVER\nbluetooth.service                  enabled disabled\nsystemd-timesyncd.service          enabled nonsense\n2 unit files listed.\n",
+            )
+            .is_err(),
+        );
+    }
+
+    #[test]
+    fn test_parse_enabled_systemd_units_output_empty() {
+        assert_eq!(
+            parse_enabled_systemd_units_output(
+                "UNIT FILE                          STATE   PRESET\n\n0 unit files listed.\n",
+            )
+            .unwrap(),
+            HashSet::<String>::new(),
+        );
+    }
+
+    #[test]
+    fn test_parse_enabled_systemd_units_output_invalid_header() {
+        assert!(
+            parse_enabled_systemd_units_output(
+                "UNIT FILE                          STATUS  PRESET\navahi-daemon.service               enabled disabled\n\n1 unit files listed.\n",
+            )
+            .is_err(),
+        );
+    }
+
+    #[test]
+    fn test_parse_enabled_systemd_units_output_invalid_state() {
+        assert!(
+            parse_enabled_systemd_units_output(
+                "UNIT FILE                          STATE   PRESET\navahi-daemon.service               disabled disabled\n\n1 unit files listed.\n",
+            )
+            .is_err(),
+        );
+    }
+
+    #[test]
+    fn test_parse_enabled_systemd_units_output_ignores_trailing_columns() {
+        assert_eq!(
+            parse_enabled_systemd_units_output(
+                "UNIT FILE                          STATE   PRESET\navahi-daemon.service               enabled static\n\n1 unit files listed.\n",
+            )
+            .unwrap(),
+            HashSet::from(["avahi-daemon.service".to_owned()]),
+        );
+    }
+
+    #[test]
+    fn test_parse_enabled_systemd_units_output_count_mismatch() {
+        assert!(
+            parse_enabled_systemd_units_output(
+                "UNIT FILE                          STATE   PRESET\navahi-daemon.service               enabled disabled\n\n2 unit files listed.\n",
+            )
+            .is_err(),
+        );
+    }
+
+    #[test]
+    fn test_parse_enabled_systemd_units_output_extra_lines_after_count() {
+        assert!(
+            parse_enabled_systemd_units_output(
+                "UNIT FILE                          STATE   PRESET\navahi-daemon.service               enabled disabled\n\n1 unit files listed.\nextra\n",
+            )
+            .is_err(),
+        );
+    }
+
+    #[test]
+    fn test_parse_enabled_systemd_units_output_duplicate_unit_file() {
+        assert!(
+            parse_enabled_systemd_units_output(
+                "UNIT FILE                          STATE   PRESET\navahi-daemon.service               enabled disabled\navahi-daemon.service               enabled enabled\n\n2 unit files listed.\n",
+            )
+            .is_err(),
+        );
+    }
+
+    #[test]
+    fn test_parse_kde_plasma_dock_apps_valid() {
+        assert_eq!(
+            parse_kde_plasma_desktop_config(
+                "[Containments][1][Applets][2][Configuration][General]\nlaunchers=applications:systemsettings.desktop,applications:org.kde.discover.desktop,preferred://filemanager,preferred://browser\n",
+            )
+            .unwrap(),
+            vec![
+                "applications:systemsettings.desktop".to_owned(),
+                "applications:org.kde.discover.desktop".to_owned(),
+                "preferred://filemanager".to_owned(),
+                "preferred://browser".to_owned(),
+            ],
+        );
+    }
+
+    #[test]
+    fn test_parse_kde_plasma_dock_apps_missing_launchers() {
+        assert!(parse_kde_plasma_desktop_config("[Containments][1]\n").is_err());
+    }
+
+    #[test]
+    fn test_parse_kde_plasma_dock_apps_multiple_launchers_lines() {
+        assert!(parse_kde_plasma_desktop_config("launchers=applications:org.kde.discover.desktop\nlaunchers=applications:systemsettings.desktop\n").is_err());
+    }
+
+    #[test]
+    fn test_parse_kde_plasma_dock_apps_empty_launchers() {
+        assert_eq!(
+            parse_kde_plasma_desktop_config("launchers=\n").unwrap(),
+            Vec::<String>::new()
         );
     }
 }

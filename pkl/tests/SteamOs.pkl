@@ -9,6 +9,28 @@ local function constraintViolation(value: Any): Boolean =
   module.catchOrNull(() -> value.toString())?.startsWith("Type constraint ") ?? false
 
 facts {
+  // -- chargeLimit --
+
+  ["allows charge limit"] {
+    noConstraintViolation(new SteamOs.SteamOsSettings {
+      chargeLimit = 50
+    })
+    noConstraintViolation(new SteamOs.SteamOsSettings {
+      chargeLimit = 60
+    })
+    noConstraintViolation(new SteamOs.SteamOsSettings {
+      chargeLimit = 100
+    })
+  }
+  ["disallows invalid charge limit"] {
+    constraintViolation(new SteamOs.SteamOsSettings {
+      chargeLimit = 101
+    })
+    constraintViolation(new SteamOs.SteamOsSettings {
+      chargeLimit = -1
+    })
+  }
+
   // -- installedFlatpaks --
 
   ["allows flatpaks"] {
@@ -56,6 +78,107 @@ facts {
       installedFlatpaks {
         "org.mozilla.firefox"
         "org.mozilla.firefox"
+      }
+    })
+  }
+
+  // -- plugins --
+
+  ["allows decky plugins"] {
+    noConstraintViolation(new SteamOs.Decky {
+      settings {}
+      plugins {
+        new {
+          name = "HLTB for Deck"
+        }
+      }
+    })
+    noConstraintViolation(new SteamOs.Decky {
+      settings {}
+      plugins {
+        new {
+          name = "HLTB for Deck"
+        }
+        new {
+          name = "ProtonDB Badges"
+          disabled = true
+        }
+      }
+    })
+  }
+  ["allows decky plugin directory names"] {
+    noConstraintViolation(new SteamOs.Decky {
+      settings {}
+      plugins {
+        new {
+          name = "HLTB for Deck"
+          directoryName = "hltb-for-deck"
+        }
+      }
+    })
+    noConstraintViolation(new SteamOs.Decky {
+      settings {}
+      plugins {
+        new {
+          name = "HLTB for Deck"
+          directoryName = "hltb-for-deck"
+        }
+        new {
+          name = "ProtonDB Badges"
+          directoryName = "protondb-decky"
+          disabled = true
+        }
+      }
+    })
+  }
+  ["disallows invalid decky plugin directory names"] {
+    constraintViolation(new SteamOs.DeckyPlugin {
+      name = "HLTB for Deck"
+      directoryName = ""
+    })
+    constraintViolation(new SteamOs.DeckyPlugin {
+      name = "HLTB for Deck"
+      directoryName = "hltb_for_deck"
+    })
+  }
+  ["disallows duplicate decky plugins"] {
+    constraintViolation(new SteamOs.Decky {
+      settings {}
+      plugins {
+        new {
+          name = "HLTB for Deck"
+        }
+        new {
+          name = "HLTB for Deck"
+        }
+      }
+    })
+    constraintViolation(new SteamOs.Decky {
+      settings {}
+      plugins {
+        new {
+          name = "HLTB for Deck"
+        }
+        new {
+          name = "HLTB for Deck"
+          disabled = true
+        }
+      }
+    })
+  }
+  ["disallows duplicate decky plugin directory names"] {
+    constraintViolation(new SteamOs.Decky {
+      settings {}
+      plugins {
+        new {
+          name = "HLTB for Deck"
+          directoryName = "shared-directory"
+        }
+        new {
+          name = "ProtonDB Badges"
+          directoryName = "shared-directory"
+          disabled = true
+        }
       }
     })
   }
@@ -232,129 +355,6 @@ facts {
         new FileCheck.FileEqualsString {
           path = "/etc/hosts"
           contents = "127.0.0.1 localhost\n"
-        }
-      }
-    })
-  }
-
-  // -- chargeLimit --
-
-  ["allows charge limit"] {
-    noConstraintViolation(new SteamOs.SteamOsSettings {
-      chargeLimit = 50
-    })
-    noConstraintViolation(new SteamOs.SteamOsSettings {
-      chargeLimit = 60
-    })
-    noConstraintViolation(new SteamOs.SteamOsSettings {
-      chargeLimit = 100
-    })
-  }
-  ["disallows invalid charge limit"] {
-    constraintViolation(new SteamOs.SteamOsSettings {
-      chargeLimit = 101
-    })
-    constraintViolation(new SteamOs.SteamOsSettings {
-      chargeLimit = -1
-    })
-  }
-
-  // -- plugins --
-
-  ["allows decky plugins"] {
-    noConstraintViolation(new SteamOs.Decky {
-      settings {}
-      plugins {
-        new {
-          name = "HLTB for Deck"
-        }
-      }
-    })
-    noConstraintViolation(new SteamOs.Decky {
-      settings {}
-      plugins {
-        new {
-          name = "HLTB for Deck"
-        }
-        new {
-          name = "ProtonDB Badges"
-          disabled = true
-        }
-      }
-    })
-  }
-  ["allows decky plugin directory names"] {
-    noConstraintViolation(new SteamOs.Decky {
-      settings {}
-      plugins {
-        new {
-          name = "HLTB for Deck"
-          directoryName = "hltb-for-deck"
-        }
-      }
-    })
-    noConstraintViolation(new SteamOs.Decky {
-      settings {}
-      plugins {
-        new {
-          name = "HLTB for Deck"
-          directoryName = "hltb-for-deck"
-        }
-        new {
-          name = "ProtonDB Badges"
-          directoryName = "protondb-decky"
-          disabled = true
-        }
-      }
-    })
-  }
-  ["disallows invalid decky plugin directory names"] {
-    constraintViolation(new SteamOs.DeckyPlugin {
-      name = "HLTB for Deck"
-      directoryName = ""
-    })
-    constraintViolation(new SteamOs.DeckyPlugin {
-      name = "HLTB for Deck"
-      directoryName = "hltb_for_deck"
-    })
-  }
-  ["disallows duplicate decky plugins"] {
-    constraintViolation(new SteamOs.Decky {
-      settings {}
-      plugins {
-        new {
-          name = "HLTB for Deck"
-        }
-        new {
-          name = "HLTB for Deck"
-        }
-      }
-    })
-    constraintViolation(new SteamOs.Decky {
-      settings {}
-      plugins {
-        new {
-          name = "HLTB for Deck"
-        }
-        new {
-          name = "HLTB for Deck"
-          disabled = true
-        }
-      }
-    })
-  }
-  ["disallows duplicate decky plugin directory names"] {
-    constraintViolation(new SteamOs.Decky {
-      settings {}
-      plugins {
-        new {
-          name = "HLTB for Deck"
-          directoryName = "shared-directory"
-        }
-        new {
-          name = "ProtonDB Badges"
-          directoryName = "shared-directory"
-          disabled = true
         }
       }
     })

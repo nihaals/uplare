@@ -182,9 +182,8 @@ fn main() -> Result<()> {
                 config.validate().context("Invalid system config")?;
 
                 let system_has_homebrew = macos::homebrew_is_installed();
-                let system_apps = macos::get_apps()?;
-                let installed_casks = if system_has_homebrew {
-                    macos::get_installed_casks()?
+                let installed_taps = if system_has_homebrew {
+                    macos::get_taps()?
                 } else {
                     HashSet::new()
                 };
@@ -193,11 +192,12 @@ fn main() -> Result<()> {
                 } else {
                     HashSet::new()
                 };
-                let installed_taps = if system_has_homebrew {
-                    macos::get_taps()?
+                let installed_casks = if system_has_homebrew {
+                    macos::get_installed_casks()?
                 } else {
                     HashSet::new()
                 };
+                let system_apps = macos::get_apps()?;
                 let (installed_app_store_apps, installed_testflight_apps): (
                     HashMap<u64, String>,
                     HashSet<String>,
@@ -228,21 +228,27 @@ fn main() -> Result<()> {
                     }
                 };
 
-                let configured_app_paths: HashSet<&str> = config
-                    .apps
-                    .iter()
-                    .flat_map(|app| match app {
-                        MacOsApp::ManualApp(manual_app) => manual_app.base.app_paths.iter(),
-                        MacOsApp::HomebrewCask(cask) => cask.base.app_paths.iter(),
-                        MacOsApp::MacAppStoreApp(app_store_app) => {
-                            app_store_app.base.app_paths.iter()
-                        }
-                        MacOsApp::TestFlightApp(testflight_app) => {
-                            testflight_app.base.app_paths.iter()
-                        }
+                let configured_taps: HashSet<&str> = config
+                    .homebrew
+                    .as_ref()
+                    .map(|homebrew| homebrew.taps.iter().map(String::as_str).collect())
+                    .unwrap_or_default();
+                let configured_formulae: HashSet<&str> = config
+                    .homebrew
+                    .as_ref()
+                    .map(|homebrew| {
+                        homebrew
+                            .explicitly_installed_formulae
+                            .iter()
+                            .map(String::as_str)
+                            .collect()
                     })
-                    .map(String::as_str)
-                    .collect();
+                    .unwrap_or_default();
+                let configured_non_app_casks: HashSet<&str> = config
+                    .homebrew
+                    .as_ref()
+                    .map(|homebrew| homebrew.non_app_casks.iter().map(String::as_str).collect())
+                    .unwrap_or_default();
 
                 let configured_manual_apps: Vec<(&str, &[String])> = config
                     .apps
@@ -295,27 +301,6 @@ fn main() -> Result<()> {
                     .iter()
                     .map(|(cask_name, _)| *cask_name)
                     .collect();
-                let configured_taps: HashSet<&str> = config
-                    .homebrew
-                    .as_ref()
-                    .map(|homebrew| homebrew.taps.iter().map(String::as_str).collect())
-                    .unwrap_or_default();
-                let configured_formulae: HashSet<&str> = config
-                    .homebrew
-                    .as_ref()
-                    .map(|homebrew| {
-                        homebrew
-                            .explicitly_installed_formulae
-                            .iter()
-                            .map(String::as_str)
-                            .collect()
-                    })
-                    .unwrap_or_default();
-                let configured_non_app_casks: HashSet<&str> = config
-                    .homebrew
-                    .as_ref()
-                    .map(|homebrew| homebrew.non_app_casks.iter().map(String::as_str).collect())
-                    .unwrap_or_default();
                 let all_configured_casks: HashSet<&str> = configured_casks
                     .union(&configured_non_app_casks)
                     .copied()
@@ -327,6 +312,21 @@ fn main() -> Result<()> {
                 let configured_testflight_names: HashSet<&str> = configured_testflight_apps
                     .iter()
                     .map(|(name, _)| *name)
+                    .collect();
+                let configured_app_paths: HashSet<&str> = config
+                    .apps
+                    .iter()
+                    .flat_map(|app| match app {
+                        MacOsApp::ManualApp(manual_app) => manual_app.base.app_paths.iter(),
+                        MacOsApp::HomebrewCask(cask) => cask.base.app_paths.iter(),
+                        MacOsApp::MacAppStoreApp(app_store_app) => {
+                            app_store_app.base.app_paths.iter()
+                        }
+                        MacOsApp::TestFlightApp(testflight_app) => {
+                            testflight_app.base.app_paths.iter()
+                        }
+                    })
+                    .map(String::as_str)
                     .collect();
 
                 let mut sections: Vec<(&str, Vec<String>)> = Vec::new();
@@ -641,11 +641,7 @@ fn main() -> Result<()> {
 
                 let system_hostname = steamos::get_hostname()?;
                 let system_charge_limit = steamos::get_charge_limit()?.unwrap_or(100);
-                let installed_flatpaks = steamos::get_installed_flatpak_apps()?;
                 let user_steam_settings = steamos::get_user_steam_settings()?;
-                let system_decky_installed = steamos::is_decky_installed()?;
-                let enabled_systemd_units = steamos::get_enabled_systemd_units()?;
-
                 let (steam_account_id, steam_user_settings, steam_client_user_settings) = {
                     let steam_user_ids = steamos::get_steam_user_settings_ids()?;
                     let mut steam_user_ids = steam_user_ids.into_iter();
@@ -666,6 +662,9 @@ fn main() -> Result<()> {
                         steam_client_user_settings,
                     )
                 };
+                let installed_flatpaks = steamos::get_installed_flatpak_apps()?;
+                let system_decky_installed = steamos::is_decky_installed()?;
+                let enabled_systemd_units = steamos::get_enabled_systemd_units()?;
 
                 let configured_flatpaks: HashSet<&str> = config
                     .installed_flatpaks
@@ -711,17 +710,6 @@ fn main() -> Result<()> {
 
                 {
                     let mut steam_settings_mismatches = Vec::new();
-                    if config.steam_settings.sign_into_friends
-                        != steam_user_settings.sign_into_friends
-                    {
-                        steam_settings_mismatches.push(format!(
-                            "{} -> config signIntoFriends = {}, system signIntoFriends = {}",
-                            steam_account_id,
-                            config.steam_settings.sign_into_friends,
-                            steam_user_settings.sign_into_friends,
-                        ));
-                    }
-
                     if config.steam_settings.twenty_four_hour_clock
                         != steam_client_user_settings.twenty_four_hour_clock
                     {
@@ -730,6 +718,17 @@ fn main() -> Result<()> {
                             steam_account_id,
                             config.steam_settings.twenty_four_hour_clock,
                             steam_client_user_settings.twenty_four_hour_clock,
+                        ));
+                    }
+
+                    if config.steam_settings.sign_into_friends
+                        != steam_user_settings.sign_into_friends
+                    {
+                        steam_settings_mismatches.push(format!(
+                            "{} -> config signIntoFriends = {}, system signIntoFriends = {}",
+                            steam_account_id,
+                            config.steam_settings.sign_into_friends,
+                            steam_user_settings.sign_into_friends,
                         ));
                     }
 

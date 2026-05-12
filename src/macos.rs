@@ -14,18 +14,18 @@ pub fn homebrew_is_installed() -> bool {
         || Path::new("/usr/local/bin/brew").is_file()
 }
 
-pub fn get_installed_casks() -> Result<HashSet<String>> {
+pub fn get_taps() -> Result<HashSet<String>> {
     let output = Command::new("brew")
-        .args(["list", "--cask", "--full-name"])
+        .arg("tap")
         .output()
-        .context("Failed to run `brew list --cask --full-name`")?;
+        .context("Failed to run `brew tap`")?;
 
     if !output.status.success() {
-        bail!("`brew list --cask --full-name` failed with non-zero exit code");
+        bail!("`brew tap` failed with non-zero exit code");
     }
 
-    let stdout = String::from_utf8(output.stdout)
-        .context("`brew list --cask --full-name` output was not valid UTF-8")?;
+    let stdout =
+        String::from_utf8(output.stdout).context("`brew tap` output was not valid UTF-8")?;
     Ok(stdout
         .lines()
         .filter_map(|line| {
@@ -64,18 +64,18 @@ pub fn get_explicitly_installed_formulae() -> Result<HashSet<String>> {
         .collect())
 }
 
-pub fn get_taps() -> Result<HashSet<String>> {
+pub fn get_installed_casks() -> Result<HashSet<String>> {
     let output = Command::new("brew")
-        .arg("tap")
+        .args(["list", "--cask", "--full-name"])
         .output()
-        .context("Failed to run `brew tap`")?;
+        .context("Failed to run `brew list --cask --full-name`")?;
 
     if !output.status.success() {
-        bail!("`brew tap` failed with non-zero exit code");
+        bail!("`brew list --cask --full-name` failed with non-zero exit code");
     }
 
-    let stdout =
-        String::from_utf8(output.stdout).context("`brew tap` output was not valid UTF-8")?;
+    let stdout = String::from_utf8(output.stdout)
+        .context("`brew list --cask --full-name` output was not valid UTF-8")?;
     Ok(stdout
         .lines()
         .filter_map(|line| {
@@ -87,6 +87,86 @@ pub fn get_taps() -> Result<HashSet<String>> {
             }
         })
         .collect())
+}
+
+/// Get the list of installed applications as either `/Applications/App.app` or `~/Applications/App.app`. Searches one
+/// subdirectory deep in `/Applications` and `~/Applications`, excluding inside apps. Excludes pre-installed apps.
+pub fn get_apps() -> Result<HashSet<String>> {
+    let home_dir: PathBuf = env::var("HOME")
+        .context("HOME environment variable not set")?
+        .into();
+
+    let mut apps = HashSet::new();
+    for (root, is_home_root) in [
+        (PathBuf::from("/Applications"), false),
+        (home_dir.join("Applications"), true),
+    ] {
+        if !root.is_dir() {
+            continue;
+        }
+
+        let home_dir = if is_home_root {
+            Some(home_dir.as_path())
+        } else {
+            None
+        };
+
+        for entry in fs::read_dir(&root)? {
+            let path = entry?.path();
+            add_potential_app(&mut apps, &path, home_dir)?;
+
+            if path.is_dir() && !is_app_bundle(&path) {
+                for nested_entry in fs::read_dir(&path)? {
+                    let nested_path = nested_entry?.path();
+                    add_potential_app(&mut apps, &nested_path, home_dir)?;
+                }
+            }
+        }
+    }
+
+    Ok(apps)
+}
+
+fn is_app_bundle(path: &Path) -> bool {
+    path.extension().is_some_and(|ext| ext == "app") && path.is_dir()
+}
+
+fn add_potential_app(
+    apps: &mut HashSet<String>,
+    path: &Path,
+    home_dir: Option<&Path>,
+) -> Result<()> {
+    if !is_app_bundle(path) {
+        return Ok(());
+    }
+    if [
+        "/Applications/Utilities/Feedback Assistant.app",
+        "/Applications/Safari.app",
+    ]
+    .contains(&path.to_str().context("App path is not valid UTF-8")?)
+    {
+        return Ok(());
+    }
+
+    if let Some(home_dir) = home_dir {
+        let relative_path = path
+            .strip_prefix(home_dir)
+            .context("App in home does not have home as prefix")?;
+        apps.insert(format!(
+            "~/{}",
+            relative_path
+                .to_str()
+                .context("App path is not valid UTF-8")?
+        ));
+    } else {
+        apps.insert(
+            path.to_str()
+                .context("App path is not valid UTF-8")?
+                .to_owned(),
+        );
+    }
+
+    Ok(())
 }
 
 #[derive(PartialEq, Eq, Hash)]
@@ -180,86 +260,6 @@ fn parse_mas_list_line(line: &str) -> Result<(u64, String), MacAppStoreListError
     }
 
     Ok((app_id, app_name))
-}
-
-/// Get the list of installed applications as either `/Applications/App.app` or `~/Applications/App.app`. Searches one
-/// subdirectory deep in `/Applications` and `~/Applications`, excluding inside apps. Excludes pre-installed apps.
-pub fn get_apps() -> Result<HashSet<String>> {
-    let home_dir: PathBuf = env::var("HOME")
-        .context("HOME environment variable not set")?
-        .into();
-
-    let mut apps = HashSet::new();
-    for (root, is_home_root) in [
-        (PathBuf::from("/Applications"), false),
-        (home_dir.join("Applications"), true),
-    ] {
-        if !root.is_dir() {
-            continue;
-        }
-
-        let home_dir = if is_home_root {
-            Some(home_dir.as_path())
-        } else {
-            None
-        };
-
-        for entry in fs::read_dir(&root)? {
-            let path = entry?.path();
-            add_potential_app(&mut apps, &path, home_dir)?;
-
-            if path.is_dir() && !is_app_bundle(&path) {
-                for nested_entry in fs::read_dir(&path)? {
-                    let nested_path = nested_entry?.path();
-                    add_potential_app(&mut apps, &nested_path, home_dir)?;
-                }
-            }
-        }
-    }
-
-    Ok(apps)
-}
-
-fn is_app_bundle(path: &Path) -> bool {
-    path.extension().is_some_and(|ext| ext == "app") && path.is_dir()
-}
-
-fn add_potential_app(
-    apps: &mut HashSet<String>,
-    path: &Path,
-    home_dir: Option<&Path>,
-) -> Result<()> {
-    if !is_app_bundle(path) {
-        return Ok(());
-    }
-    if [
-        "/Applications/Utilities/Feedback Assistant.app",
-        "/Applications/Safari.app",
-    ]
-    .contains(&path.to_str().context("App path is not valid UTF-8")?)
-    {
-        return Ok(());
-    }
-
-    if let Some(home_dir) = home_dir {
-        let relative_path = path
-            .strip_prefix(home_dir)
-            .context("App in home does not have home as prefix")?;
-        apps.insert(format!(
-            "~/{}",
-            relative_path
-                .to_str()
-                .context("App path is not valid UTF-8")?
-        ));
-    } else {
-        apps.insert(
-            path.to_str()
-                .context("App path is not valid UTF-8")?
-                .to_owned(),
-        );
-    }
-
-    Ok(())
 }
 
 #[cfg(test)]

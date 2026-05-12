@@ -129,21 +129,6 @@ fn validate_non_empty_distinct_strings(values: &Vec<String>) -> Result<(), Valid
     Ok(())
 }
 
-fn validate_plugin_directory_name(value: &str) -> Result<(), ValidationError> {
-    if value.is_empty() {
-        return Err(ValidationError::new("empty_directory_name"));
-    }
-
-    if !value
-        .chars()
-        .all(|char| char.is_ascii_alphanumeric() || char == '-')
-    {
-        return Err(ValidationError::new("invalid_directory_name"));
-    }
-
-    Ok(())
-}
-
 fn validate_distinct_plugins(plugins: &Vec<DeckyPlugin>) -> Result<(), ValidationError> {
     let mut plugin_names = HashSet::new();
     let mut plugin_directory_names = HashSet::new();
@@ -157,6 +142,21 @@ fn validate_distinct_plugins(plugins: &Vec<DeckyPlugin>) -> Result<(), Validatio
         {
             return Err(ValidationError::new("duplicate_plugin_directory_name"));
         }
+    }
+
+    Ok(())
+}
+
+fn validate_plugin_directory_name(value: &str) -> Result<(), ValidationError> {
+    if value.is_empty() {
+        return Err(ValidationError::new("empty_directory_name"));
+    }
+
+    if !value
+        .chars()
+        .all(|char| char.is_ascii_alphanumeric() || char == '-')
+    {
+        return Err(ValidationError::new("invalid_directory_name"));
     }
 
     Ok(())
@@ -225,6 +225,30 @@ mod tests {
         }
     }
 
+    // -- chargeLimit --
+
+    #[test]
+    fn allows_charge_limit() {
+        let mut settings = steam_os_settings();
+        settings.charge_limit = 50;
+        assert!(no_constraint_violation(&settings));
+
+        let mut settings = steam_os_settings();
+        settings.charge_limit = 60;
+        assert!(no_constraint_violation(&settings));
+
+        let mut settings = steam_os_settings();
+        settings.charge_limit = 100;
+        assert!(no_constraint_violation(&settings));
+    }
+
+    #[test]
+    fn disallows_invalid_charge_limit() {
+        let mut settings = steam_os_settings();
+        settings.charge_limit = 101;
+        assert!(constraint_violation(&settings));
+    }
+
     // -- installedFlatpaks --
 
     #[test]
@@ -250,128 +274,6 @@ mod tests {
         let mut config = steamos();
         config.installed_flatpaks = strings(&["org.mozilla.firefox", "org.mozilla.firefox"]);
         assert!(constraint_violation(&config));
-    }
-
-    // -- enabledSystemdUnits --
-
-    #[test]
-    fn allows_systemd_units() {
-        let mut config = steamos();
-        config.enabled_systemd_units = strings(&["sshd.service"]);
-        assert!(no_constraint_violation(&config));
-
-        let mut config = steamos();
-        config.enabled_systemd_units = strings(&["sshd.service", "avahi-daemon.service"]);
-        assert!(no_constraint_violation(&config));
-    }
-
-    #[test]
-    fn disallows_systemd_unit_with_no_dot() {
-        let mut config = steamos();
-        config.enabled_systemd_units = strings(&["sshd"]);
-        assert!(constraint_violation(&config));
-    }
-
-    #[test]
-    fn disallows_duplicate_systemd_units() {
-        let mut config = steamos();
-        config.enabled_systemd_units = strings(&["sshd.service", "sshd.service"]);
-        assert!(constraint_violation(&config));
-    }
-
-    // -- desktop --
-
-    #[test]
-    fn allows_desktop_entries() {
-        let mut config = steamos();
-        config.desktop = Some(strings(&["Return.desktop"]));
-        assert!(no_constraint_violation(&config));
-
-        let mut config = steamos();
-        config.desktop = Some(strings(&["Return.desktop", "steam.desktop"]));
-        assert!(no_constraint_violation(&config));
-    }
-
-    #[test]
-    fn disallows_duplicate_desktop_entries() {
-        let mut config = steamos();
-        config.desktop = Some(strings(&["Return.desktop", "Return.desktop"]));
-        assert!(constraint_violation(&config));
-    }
-
-    // -- kdePlasmaDock --
-
-    #[test]
-    fn allows_kde_plasma_dock_entries() {
-        let mut config = steamos();
-        config.kde_plasma_dock = Some(strings(&["Return.desktop"]));
-        assert!(no_constraint_violation(&config));
-
-        let mut config = steamos();
-        config.kde_plasma_dock = Some(strings(&["Return.desktop", "steam.desktop"]));
-        assert!(no_constraint_violation(&config));
-    }
-
-    #[test]
-    fn disallows_duplicate_kde_plasma_dock_entries() {
-        let mut config = steamos();
-        config.kde_plasma_dock = Some(strings(&["Return.desktop", "Return.desktop"]));
-        assert!(constraint_violation(&config));
-    }
-
-    // -- files --
-
-    #[test]
-    fn allows_distinct_file_checks() {
-        let mut config = steamos();
-        config.files = vec![
-            FileCheck::FileExists(FileExists {
-                path: "/etc/hosts".to_owned(),
-            }),
-            FileCheck::DirectoryExists(DirectoryExists {
-                path: "/etc/".to_owned(),
-            }),
-        ];
-        assert!(no_constraint_violation(&config));
-    }
-
-    #[test]
-    fn disallows_duplicate_file_check_paths() {
-        let mut config = steamos();
-        config.files = vec![
-            FileCheck::FileExists(FileExists {
-                path: "/etc/hosts".to_owned(),
-            }),
-            FileCheck::FileEqualsString(FileEqualsString {
-                path: "/etc/hosts".to_owned(),
-                contents: "127.0.0.1 localhost\n".to_owned(),
-            }),
-        ];
-        assert!(constraint_violation(&config));
-    }
-
-    // -- chargeLimit --
-
-    #[test]
-    fn allows_charge_limit() {
-        let mut settings = steam_os_settings();
-        settings.charge_limit = 50;
-        assert!(no_constraint_violation(&settings));
-
-        let mut settings = steam_os_settings();
-        settings.charge_limit = 60;
-        assert!(no_constraint_violation(&settings));
-
-        let mut settings = steam_os_settings();
-        settings.charge_limit = 100;
-        assert!(no_constraint_violation(&settings));
-    }
-
-    #[test]
-    fn disallows_invalid_charge_limit() {
-        let mut settings = steam_os_settings();
-        settings.charge_limit = 101;
-        assert!(constraint_violation(&settings));
     }
 
     // -- plugins --
@@ -485,5 +387,103 @@ mod tests {
             ],
         };
         assert!(constraint_violation(&decky));
+    }
+
+    // -- enabledSystemdUnits --
+
+    #[test]
+    fn allows_systemd_units() {
+        let mut config = steamos();
+        config.enabled_systemd_units = strings(&["sshd.service"]);
+        assert!(no_constraint_violation(&config));
+
+        let mut config = steamos();
+        config.enabled_systemd_units = strings(&["sshd.service", "avahi-daemon.service"]);
+        assert!(no_constraint_violation(&config));
+    }
+
+    #[test]
+    fn disallows_systemd_unit_with_no_dot() {
+        let mut config = steamos();
+        config.enabled_systemd_units = strings(&["sshd"]);
+        assert!(constraint_violation(&config));
+    }
+
+    #[test]
+    fn disallows_duplicate_systemd_units() {
+        let mut config = steamos();
+        config.enabled_systemd_units = strings(&["sshd.service", "sshd.service"]);
+        assert!(constraint_violation(&config));
+    }
+
+    // -- desktop --
+
+    #[test]
+    fn allows_desktop_entries() {
+        let mut config = steamos();
+        config.desktop = Some(strings(&["Return.desktop"]));
+        assert!(no_constraint_violation(&config));
+
+        let mut config = steamos();
+        config.desktop = Some(strings(&["Return.desktop", "steam.desktop"]));
+        assert!(no_constraint_violation(&config));
+    }
+
+    #[test]
+    fn disallows_duplicate_desktop_entries() {
+        let mut config = steamos();
+        config.desktop = Some(strings(&["Return.desktop", "Return.desktop"]));
+        assert!(constraint_violation(&config));
+    }
+
+    // -- kdePlasmaDock --
+
+    #[test]
+    fn allows_kde_plasma_dock_entries() {
+        let mut config = steamos();
+        config.kde_plasma_dock = Some(strings(&["Return.desktop"]));
+        assert!(no_constraint_violation(&config));
+
+        let mut config = steamos();
+        config.kde_plasma_dock = Some(strings(&["Return.desktop", "steam.desktop"]));
+        assert!(no_constraint_violation(&config));
+    }
+
+    #[test]
+    fn disallows_duplicate_kde_plasma_dock_entries() {
+        let mut config = steamos();
+        config.kde_plasma_dock = Some(strings(&["Return.desktop", "Return.desktop"]));
+        assert!(constraint_violation(&config));
+    }
+
+    // -- files --
+
+    #[test]
+    fn allows_distinct_file_checks() {
+        let mut config = steamos();
+        config.files = vec![
+            FileCheck::FileExists(FileExists {
+                path: "/etc/hosts".to_owned(),
+            }),
+            FileCheck::DirectoryExists(DirectoryExists {
+                path: "/etc/".to_owned(),
+            }),
+        ];
+        assert!(no_constraint_violation(&config));
+    }
+
+    #[test]
+    fn disallows_duplicate_file_check_paths() {
+        let mut config = steamos();
+        config.files = vec![
+            FileCheck::FileExists(FileExists {
+                path: "/etc/hosts".to_owned(),
+            }),
+            FileCheck::FileEqualsString(FileEqualsString {
+                path: "/etc/hosts".to_owned(),
+                contents: "127.0.0.1 localhost\n".to_owned(),
+            }),
+        ];
+        assert!(constraint_violation(&config));
     }
 }

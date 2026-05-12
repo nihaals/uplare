@@ -92,39 +92,17 @@ impl Validate for MacOsApp {
     }
 }
 
-fn validate_app_paths(app_paths: &Vec<String>) -> Result<(), ValidationError> {
+fn validate_taps(taps: &Vec<String>) -> Result<(), ValidationError> {
     let mut seen = HashSet::new();
-    for app_path in app_paths {
-        if !is_valid_mac_app_path(app_path) {
-            let mut error = ValidationError::new("invalid_app_path");
-            error.add_param(Cow::from("value"), &app_path.clone());
+    for tap in taps {
+        if tap.matches('/').count() != 1 {
+            let mut error = ValidationError::new("invalid_tap");
+            error.add_param(Cow::from("value"), &tap.clone());
             return Err(error);
         }
-        if !seen.insert(app_path) {
-            let mut error = ValidationError::new("duplicate_app_path");
-            error.add_param(Cow::from("value"), &app_path.clone());
-            return Err(error);
-        }
-    }
-    Ok(())
-}
-
-fn validate_cask_name(cask_name: &str) -> Result<(), ValidationError> {
-    if is_valid_cask_name(cask_name) {
-        return Ok(());
-    }
-    let mut error = ValidationError::new("invalid_cask_name");
-    error.add_param(Cow::from("value"), &cask_name.to_string());
-    Err(error)
-}
-
-fn validate_cask_names(cask_names: &Vec<String>) -> Result<(), ValidationError> {
-    let mut seen = HashSet::new();
-    for cask_name in cask_names {
-        validate_cask_name(cask_name)?;
-        if !seen.insert(package_name_end(cask_name)) {
-            let mut error = ValidationError::new("duplicate_cask_name");
-            error.add_param(Cow::from("value"), &cask_name.clone());
+        if !seen.insert(tap) {
+            let mut error = ValidationError::new("duplicate_tap");
+            error.add_param(Cow::from("value"), &tap.clone());
             return Err(error);
         }
     }
@@ -153,17 +131,39 @@ fn validate_formula_names(formula_names: &Vec<String>) -> Result<(), ValidationE
     Ok(())
 }
 
-fn validate_taps(taps: &Vec<String>) -> Result<(), ValidationError> {
+fn validate_cask_name(cask_name: &str) -> Result<(), ValidationError> {
+    if is_valid_cask_name(cask_name) {
+        return Ok(());
+    }
+    let mut error = ValidationError::new("invalid_cask_name");
+    error.add_param(Cow::from("value"), &cask_name.to_string());
+    Err(error)
+}
+
+fn validate_cask_names(cask_names: &Vec<String>) -> Result<(), ValidationError> {
     let mut seen = HashSet::new();
-    for tap in taps {
-        if tap.matches('/').count() != 1 {
-            let mut error = ValidationError::new("invalid_tap");
-            error.add_param(Cow::from("value"), &tap.clone());
+    for cask_name in cask_names {
+        validate_cask_name(cask_name)?;
+        if !seen.insert(package_name_end(cask_name)) {
+            let mut error = ValidationError::new("duplicate_cask_name");
+            error.add_param(Cow::from("value"), &cask_name.clone());
             return Err(error);
         }
-        if !seen.insert(tap) {
-            let mut error = ValidationError::new("duplicate_tap");
-            error.add_param(Cow::from("value"), &tap.clone());
+    }
+    Ok(())
+}
+
+fn validate_app_paths(app_paths: &Vec<String>) -> Result<(), ValidationError> {
+    let mut seen = HashSet::new();
+    for app_path in app_paths {
+        if !is_valid_mac_app_path(app_path) {
+            let mut error = ValidationError::new("invalid_app_path");
+            error.add_param(Cow::from("value"), &app_path.clone());
+            return Err(error);
+        }
+        if !seen.insert(app_path) {
+            let mut error = ValidationError::new("duplicate_app_path");
+            error.add_param(Cow::from("value"), &app_path.clone());
             return Err(error);
         }
     }
@@ -426,6 +426,124 @@ mod tests {
         MacOsConfig { homebrew, apps }
     }
 
+    // -- Homebrew.taps / explicitly_installed_formulae / non_app_casks --
+
+    #[test]
+    fn allows_homebrew_with_no_taps() {
+        assert!(no_constraint_violation(&homebrew_with_taps(&[])));
+    }
+
+    #[test]
+    fn allows_homebrew_with_taps() {
+        assert!(no_constraint_violation(&homebrew_with_taps(&[
+            "homebrew/cask",
+            "homebrew/core"
+        ])));
+    }
+
+    #[test]
+    fn disallows_duplicate_taps() {
+        assert!(constraint_violation(&homebrew_with_taps(&[
+            "homebrew/cask",
+            "homebrew/cask"
+        ])));
+    }
+
+    #[test]
+    fn disallows_tap_with_no_slash() {
+        assert!(constraint_violation(&homebrew_with_taps(&["homebrew"])));
+    }
+
+    #[test]
+    fn disallows_tap_with_two_slashes() {
+        assert!(constraint_violation(&homebrew_with_taps(&[
+            "homebrew/cask/fonts"
+        ])));
+    }
+
+    #[test]
+    fn allows_homebrew_with_explicitly_installed_formulae() {
+        assert!(no_constraint_violation(&homebrew_with_formulae(&[
+            "xz",
+            "ca-certificates",
+            "hdrhistogram_c",
+            "python@3.14",
+            "llama.cpp",
+            "homebrew/core/openssl@3",
+        ])));
+    }
+
+    #[test]
+    fn disallows_invalid_explicitly_installed_formula() {
+        assert!(constraint_violation(&homebrew_with_formulae(&[
+            "hdrhistogram__c"
+        ])));
+        assert!(constraint_violation(&homebrew_with_formulae(&[
+            "ca-certificates!"
+        ])));
+        assert!(constraint_violation(&homebrew_with_formulae(&[
+            "python.3@14"
+        ])));
+        assert!(constraint_violation(&homebrew_with_formulae(&["@python"])));
+        assert!(constraint_violation(&homebrew_with_formulae(&["python@"])));
+        assert!(constraint_violation(&homebrew_with_formulae(&[
+            "python@@3"
+        ])));
+        assert!(constraint_violation(&homebrew_with_formulae(&[
+            "python@3@14"
+        ])));
+    }
+
+    #[test]
+    fn disallows_duplicate_explicitly_installed_formulae() {
+        assert!(constraint_violation(&homebrew_with_formulae(&["xz", "xz"])));
+        assert!(constraint_violation(&homebrew_with_formulae(&[
+            "homebrew/core/openssl@3",
+            "openssl@3"
+        ])));
+        assert!(constraint_violation(&homebrew_with_formulae(&[
+            "homebrew/core/openssl@3",
+            "user/repo/openssl@3"
+        ])));
+    }
+
+    #[test]
+    fn allows_homebrew_with_no_non_app_casks() {
+        assert!(no_constraint_violation(&homebrew()));
+    }
+
+    #[test]
+    fn allows_homebrew_with_non_app_casks() {
+        assert!(no_constraint_violation(&homebrew_with_non_app_casks(&[
+            "font-fira-code",
+            "macfuse",
+            "homebrew/cask/font-fira-code-nerd-font"
+        ])));
+    }
+
+    #[test]
+    fn disallows_invalid_non_app_cask_name() {
+        assert!(constraint_violation(&homebrew_with_non_app_casks(&[
+            "font-fira-code!"
+        ])));
+    }
+
+    #[test]
+    fn disallows_duplicate_non_app_cask_names() {
+        assert!(constraint_violation(&homebrew_with_non_app_casks(&[
+            "font-fira-code",
+            "font-fira-code"
+        ])));
+        assert!(constraint_violation(&homebrew_with_non_app_casks(&[
+            "homebrew/cask/font-fira-code",
+            "font-fira-code"
+        ])));
+        assert!(constraint_violation(&homebrew_with_non_app_casks(&[
+            "homebrew/cask/font-fira-code",
+            "user/repo/font-fira-code"
+        ])));
+    }
+
     // -- App path validation (BaseMacOsApp) --
 
     #[test]
@@ -612,124 +730,6 @@ mod tests {
             "homebrew/cask/fonts/font-fira-code",
             &["/Applications/Font Fira Code.app"]
         )));
-    }
-
-    // -- Homebrew --
-
-    #[test]
-    fn allows_homebrew_with_no_taps() {
-        assert!(no_constraint_violation(&homebrew_with_taps(&[])));
-    }
-
-    #[test]
-    fn allows_homebrew_with_taps() {
-        assert!(no_constraint_violation(&homebrew_with_taps(&[
-            "homebrew/cask",
-            "homebrew/core"
-        ])));
-    }
-
-    #[test]
-    fn disallows_duplicate_taps() {
-        assert!(constraint_violation(&homebrew_with_taps(&[
-            "homebrew/cask",
-            "homebrew/cask"
-        ])));
-    }
-
-    #[test]
-    fn disallows_tap_with_no_slash() {
-        assert!(constraint_violation(&homebrew_with_taps(&["homebrew"])));
-    }
-
-    #[test]
-    fn disallows_tap_with_two_slashes() {
-        assert!(constraint_violation(&homebrew_with_taps(&[
-            "homebrew/cask/fonts"
-        ])));
-    }
-
-    #[test]
-    fn allows_homebrew_with_explicitly_installed_formulae() {
-        assert!(no_constraint_violation(&homebrew_with_formulae(&[
-            "xz",
-            "ca-certificates",
-            "hdrhistogram_c",
-            "python@3.14",
-            "llama.cpp",
-            "homebrew/core/openssl@3",
-        ])));
-    }
-
-    #[test]
-    fn disallows_invalid_explicitly_installed_formula() {
-        assert!(constraint_violation(&homebrew_with_formulae(&[
-            "hdrhistogram__c"
-        ])));
-        assert!(constraint_violation(&homebrew_with_formulae(&[
-            "ca-certificates!"
-        ])));
-        assert!(constraint_violation(&homebrew_with_formulae(&[
-            "python.3@14"
-        ])));
-        assert!(constraint_violation(&homebrew_with_formulae(&["@python"])));
-        assert!(constraint_violation(&homebrew_with_formulae(&["python@"])));
-        assert!(constraint_violation(&homebrew_with_formulae(&[
-            "python@@3"
-        ])));
-        assert!(constraint_violation(&homebrew_with_formulae(&[
-            "python@3@14"
-        ])));
-    }
-
-    #[test]
-    fn disallows_duplicate_explicitly_installed_formulae() {
-        assert!(constraint_violation(&homebrew_with_formulae(&["xz", "xz"])));
-        assert!(constraint_violation(&homebrew_with_formulae(&[
-            "homebrew/core/openssl@3",
-            "openssl@3"
-        ])));
-        assert!(constraint_violation(&homebrew_with_formulae(&[
-            "homebrew/core/openssl@3",
-            "user/repo/openssl@3"
-        ])));
-    }
-
-    #[test]
-    fn allows_homebrew_with_no_non_app_casks() {
-        assert!(no_constraint_violation(&homebrew()));
-    }
-
-    #[test]
-    fn allows_homebrew_with_non_app_casks() {
-        assert!(no_constraint_violation(&homebrew_with_non_app_casks(&[
-            "font-fira-code",
-            "macfuse",
-            "homebrew/cask/font-fira-code-nerd-font"
-        ])));
-    }
-
-    #[test]
-    fn disallows_invalid_non_app_cask_name() {
-        assert!(constraint_violation(&homebrew_with_non_app_casks(&[
-            "font-fira-code!"
-        ])));
-    }
-
-    #[test]
-    fn disallows_duplicate_non_app_cask_names() {
-        assert!(constraint_violation(&homebrew_with_non_app_casks(&[
-            "font-fira-code",
-            "font-fira-code"
-        ])));
-        assert!(constraint_violation(&homebrew_with_non_app_casks(&[
-            "homebrew/cask/font-fira-code",
-            "font-fira-code"
-        ])));
-        assert!(constraint_violation(&homebrew_with_non_app_casks(&[
-            "homebrew/cask/font-fira-code",
-            "user/repo/font-fira-code"
-        ])));
     }
 
     // -- MacAppStoreApp --
