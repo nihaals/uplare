@@ -1,7 +1,6 @@
+mod fetchers;
 mod file_checks;
-mod macos;
 mod pkl_types;
-mod steamos;
 
 use std::{
     collections::{HashMap, HashSet},
@@ -13,6 +12,7 @@ use anyhow::{Context, Result, bail};
 use clap::{CommandFactory, Parser, Subcommand};
 use validator::Validate;
 
+use fetchers::{macos, steamos};
 use pkl_types::{
     macos::MacOsApp,
     steamos::{DeckyStoreChannel, DeckyUpdateChannel},
