@@ -19,7 +19,9 @@ class MacOs {
 }
 
 local const formulaRegex =
-  Regex(#"([^/]+/[^/]+/)?(?!.*--)(?!.*__)(?!.*@.*@)(?!.*\..*@)[a-z0-9]([a-z0-9-_.]*[a-z0-9])?(@[a-z0-9]([a-z0-9-.]*[a-z0-9])?)?"#)
+  Regex(
+    #"([^/]+/[^/]+/)?(?!.*--)(?!.*__)(?!.*@.*@)(?!.*\..*@)[a-z0-9]([a-z0-9-_.]*[a-z0-9])?(@[a-z0-9]([a-z0-9-.]*[a-z0-9])?)?"#,
+  )
 local const caskRegex = Regex(#"([^/]+/[^/]+/)?(?!.*--)(?!.*@.*@)[a-z0-9]([a-z0-9-@]*[a-z0-9])?"#)
 local const function lastSlash(token: String): String = token.split("/").last
 class Homebrew {
