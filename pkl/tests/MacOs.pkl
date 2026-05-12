@@ -1,5 +1,6 @@
 amends "pkl:test"
 
+import "../FileCheck.pkl"
 import "../MacOs.pkl"
 
 local function noConstraintViolation(value: Any): Boolean =
@@ -752,6 +753,50 @@ facts {
           appPaths {
             "/Applications/My Other App.app"
           }
+        }
+      }
+    })
+  }
+
+  // -- files --
+
+  ["allows distinct file checks"] {
+    noConstraintViolation(new MacOs.MacOs {
+      apps {
+        new MacOs.ManualApp {
+          name = "My App"
+          appPaths {
+            "/Applications/My App.app"
+          }
+        }
+      }
+      files {
+        new FileCheck.FileExists {
+          path = "/etc/hosts"
+        }
+        new FileCheck.DirectoryExists {
+          path = "/etc/"
+        }
+      }
+    })
+  }
+  ["disallows duplicate file check paths"] {
+    constraintViolation(new MacOs.MacOs {
+      apps {
+        new MacOs.ManualApp {
+          name = "My App"
+          appPaths {
+            "/Applications/My App.app"
+          }
+        }
+      }
+      files {
+        new FileCheck.FileExists {
+          path = "/etc/hosts"
+        }
+        new FileCheck.FileEqualsString {
+          path = "/etc/hosts"
+          contents = "127.0.0.1 localhost\n"
         }
       }
     })

@@ -42,6 +42,8 @@ chmod +x uplare
 ```pkl
 // Replace with version from `uplare --version`
 amends "package://github.com/nihaals/uplare/releases/download/v0.0.0/uplare-pkl@0.0.0#/MacOs.pkl"
+// Optional, only needed if you use `files`
+import "package://github.com/nihaals/uplare/releases/download/v0.0.0/uplare-pkl@0.0.0#/FileCheck.pkl"
 
 mac {
   homebrew = new Homebrew {
@@ -69,6 +71,15 @@ mac {
       appStoreId = 497799835
       appPaths {
         "/Applications/Xcode.app"
+      }
+    }
+  }
+  files {
+    new FileCheck.FileContainsStrings {
+      path = "/etc/hosts"
+      substrings = new {
+        "127.0.0.1"
+        "::1"
       }
     }
   }

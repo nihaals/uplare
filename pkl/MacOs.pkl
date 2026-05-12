@@ -1,5 +1,7 @@
 module uplare.MacOs
 
+import "FileCheck.pkl"
+
 mac: MacOs
 class MacOs {
   homebrew: Homebrew? = null
@@ -16,6 +18,7 @@ class MacOs {
         .filter((app) -> app is ManualApp || app is TestFlightApp)
         .isDistinctBy((app) -> (app as (ManualApp | TestFlightApp)).name),
   )
+  files: Listing<FileCheck.FileCheck>(isDistinctBy((fileCheck) -> fileCheck.path)) = new {}
 }
 
 local const formulaRegex =

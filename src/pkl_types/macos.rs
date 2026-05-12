@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::{borrow::Cow, collections::HashSet};
 use validator::{Validate, ValidationError, ValidationErrors};
 
+use crate::pkl_types::file_check::{FileCheck, validate_distinct_file_check_paths};
+
 #[derive(Deserialize, Serialize, Validate)]
 #[serde(rename_all = "camelCase")]
 #[validate(schema(function = "validate_macos_config"))]
@@ -10,6 +12,8 @@ pub struct MacOsConfig {
     pub homebrew: Option<Homebrew>,
     #[validate(length(min = 1), nested)]
     pub apps: Vec<MacOsApp>,
+    #[validate(nested, custom(function = "validate_distinct_file_check_paths"))]
+    pub files: Vec<FileCheck>,
 }
 
 #[derive(Deserialize, Serialize, Validate)]
@@ -341,6 +345,7 @@ fn is_valid_homebrew_package_name(package_name: &str, package_type: PackageType)
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::pkl_types::file_check::{DirectoryExists, FileEqualsString, FileExists};
 
     fn no_constraint_violation(value: &impl Validate) -> bool {
         value.validate().is_ok()
@@ -423,7 +428,11 @@ mod tests {
     }
 
     fn macos(homebrew: Option<Homebrew>, apps: Vec<MacOsApp>) -> MacOsConfig {
-        MacOsConfig { homebrew, apps }
+        MacOsConfig {
+            homebrew,
+            apps,
+            files: vec![],
+        }
     }
 
     // -- Homebrew.taps / explicitly_installed_formulae / non_app_casks --
@@ -1034,5 +1043,48 @@ mod tests {
                 )),
             ]
         )));
+    }
+
+    // -- files --
+
+    #[test]
+    fn allows_distinct_file_checks() {
+        let mut config = macos(
+            None,
+            vec![MacOsApp::ManualApp(manual(
+                "My App",
+                &["/Applications/My App.app"],
+            ))],
+        );
+        config.files = vec![
+            FileCheck::FileExists(FileExists {
+                path: "/etc/hosts".to_owned(),
+            }),
+            FileCheck::DirectoryExists(DirectoryExists {
+                path: "/etc/".to_owned(),
+            }),
+        ];
+        assert!(no_constraint_violation(&config));
+    }
+
+    #[test]
+    fn disallows_duplicate_file_check_paths() {
+        let mut config = macos(
+            None,
+            vec![MacOsApp::ManualApp(manual(
+                "My App",
+                &["/Applications/My App.app"],
+            ))],
+        );
+        config.files = vec![
+            FileCheck::FileExists(FileExists {
+                path: "/etc/hosts".to_owned(),
+            }),
+            FileCheck::FileEqualsString(FileEqualsString {
+                path: "/etc/hosts".to_owned(),
+                contents: "127.0.0.1 localhost\n".to_owned(),
+            }),
+        ];
+        assert!(constraint_violation(&config));
     }
 }

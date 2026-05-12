@@ -1,4 +1,5 @@
 amends "../MacOs.pkl"
+import "../FileCheck.pkl"
 
 mac {
   homebrew = new Homebrew {
@@ -26,6 +27,15 @@ mac {
       appStoreId = 497799835
       appPaths {
         "/Applications/Xcode.app"
+      }
+    }
+  }
+  files {
+    new FileCheck.FileContainsStrings {
+      path = "/etc/hosts"
+      substrings = new {
+        "127.0.0.1"
+        "::1"
       }
     }
   }

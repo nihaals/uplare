@@ -66,6 +66,17 @@ enum DiffCommands {
 
 #[derive(Subcommand)]
 enum FileSyncCommands {
+    /// macOS
+    #[command(name = "macos")]
+    MacOs {
+        /// Output directory that will contain the mirrored symlinks
+        #[arg(short = 'o', long = "root")]
+        root: PathBuf,
+
+        /// System configuration file to compare against
+        system_config: PathBuf,
+    },
+
     /// SteamOS
     #[command(name = "steamos")]
     SteamOs {
@@ -162,6 +173,14 @@ fn print_sections(sections: Vec<(&str, Vec<String>)>) {
     }
 }
 
+fn read_macos_config(system_config: PathBuf) -> Result<pkl_types::macos::MacOsConfig> {
+    let config = fs::read_to_string(system_config)?;
+    let config = serde_json::from_str::<pkl_types::macos::MacOsConfig>(&config)
+        .context("Failed to read system config")?;
+    config.validate().context("Invalid system config")?;
+    Ok(config)
+}
+
 fn read_steamos_config(system_config: PathBuf) -> Result<pkl_types::steamos::SteamOsConfig> {
     let config = fs::read_to_string(system_config)?;
     let config = serde_json::from_str::<pkl_types::steamos::SteamOsConfig>(&config)
@@ -176,10 +195,7 @@ fn main() -> Result<()> {
     match cli.command {
         Commands::Diff { command } => match command {
             DiffCommands::MacOs { system_config } => {
-                let config = fs::read_to_string(system_config)?;
-                let config = serde_json::from_str::<pkl_types::macos::MacOsConfig>(&config)
-                    .context("Failed to read system config")?;
-                config.validate().context("Invalid system config")?;
+                let config = read_macos_config(system_config)?;
 
                 let system_has_homebrew = macos::homebrew_is_installed();
                 let installed_taps = if system_has_homebrew {
@@ -634,6 +650,13 @@ fn main() -> Result<()> {
                     }
                 }
 
+                {
+                    let file_check_mismatches = file_checks::diff_file_checks(&config.files)?;
+                    if !file_check_mismatches.is_empty() {
+                        sections.push(("File checks mismatch", file_check_mismatches));
+                    }
+                }
+
                 print_sections(sections);
             }
             DiffCommands::SteamOs { system_config } => {
@@ -1003,28 +1026,33 @@ fn main() -> Result<()> {
                 print_sections(sections);
             }
         },
-        Commands::FileSync { command } => match command {
-            FileSyncCommands::SteamOs {
-                root,
-                system_config,
-            } => {
-                let config = read_steamos_config(system_config)?;
-                let report = file_checks::sync_sync_file_checks(&config.files, &root)?;
-                for deleted in report.deleted {
-                    println!("Deleted {}", deleted.display());
-                }
-                for (symlink_path, symlink_target) in report.created {
-                    println!(
-                        "Created {} -> {}",
-                        symlink_path.display(),
-                        symlink_target.display(),
-                    );
-                }
-                for warning in report.warnings {
-                    eprintln!("Warning: {}", warning);
-                }
+        Commands::FileSync { command } => {
+            let (files, root) = match command {
+                FileSyncCommands::MacOs {
+                    root,
+                    system_config,
+                } => (read_macos_config(system_config)?.files, root),
+                FileSyncCommands::SteamOs {
+                    root,
+                    system_config,
+                } => (read_steamos_config(system_config)?.files, root),
+            };
+
+            let report = file_checks::sync_sync_file_checks(&files, &root)?;
+            for deleted in report.deleted {
+                println!("Deleted {}", deleted.display());
             }
-        },
+            for (symlink_path, symlink_target) in report.created {
+                println!(
+                    "Created {} -> {}",
+                    symlink_path.display(),
+                    symlink_target.display(),
+                );
+            }
+            for warning in report.warnings {
+                eprintln!("Warning: {}", warning);
+            }
+        }
         Commands::Completions { shell } => {
             shell.generate(&mut Cli::command(), &mut std::io::stdout());
         }

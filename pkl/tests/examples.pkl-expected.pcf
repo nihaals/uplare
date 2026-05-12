@@ -26,7 +26,8 @@ examples {
           ],
           "caskName": "visual-studio-code"
         }
-      ]
+      ],
+      "files": []
     }
     
     """
@@ -64,6 +65,16 @@ examples {
             "/Applications/Xcode.app"
           ],
           "appStoreId": 497799835
+        }
+      ],
+      "files": [
+        {
+          "type": "FileContainsStrings",
+          "path": "/etc/hosts",
+          "substrings": [
+            "127.0.0.1",
+            "::1"
+          ]
         }
       ]
     }
