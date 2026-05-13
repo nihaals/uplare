@@ -18,50 +18,82 @@ fn sort_paths_by_app_name<T: AsRef<str>>(paths: &mut [T]) {
     });
 }
 
-pub fn generate_diff(config: MacOsConfig) -> Result<Vec<(&'static str, Vec<String>)>> {
+struct State {
+    homebrew: Option<HomebrewState>,
+    apps: HashSet<String>,
+    mas_apps: HashSet<macos::MacAppStoreApp>,
+}
+
+struct HomebrewState {
+    taps: HashSet<String>,
+    explicitly_installed_formulae: HashSet<String>,
+    installed_casks: HashSet<String>,
+}
+
+fn get_state() -> Result<State> {
     let system_has_homebrew = macos::homebrew_is_installed();
-    let installed_taps = if system_has_homebrew {
-        macos::get_taps()?
+    let homebrew = if system_has_homebrew {
+        Some(HomebrewState {
+            taps: macos::get_taps()?,
+            explicitly_installed_formulae: macos::get_explicitly_installed_formulae()?,
+            installed_casks: macos::get_installed_casks()?,
+        })
     } else {
-        HashSet::new()
+        None
     };
-    let installed_formulae = if system_has_homebrew {
-        macos::get_explicitly_installed_formulae()?
-    } else {
-        HashSet::new()
-    };
-    let installed_casks = if system_has_homebrew {
-        macos::get_installed_casks()?
-    } else {
-        HashSet::new()
-    };
-    let system_apps = macos::get_apps()?;
-    let (installed_app_store_apps, installed_testflight_apps): (
-        HashMap<u64, String>,
-        HashSet<String>,
-    ) = match macos::get_installed_mas_apps() {
-        Ok(installed_mas_apps) => {
-            let mut app_store = HashMap::new();
-            let mut testflight = HashSet::new();
-            for app in installed_mas_apps {
-                match app {
-                    macos::MacAppStoreApp::AppStore { app_id, app_name } => {
-                        app_store.insert(app_id, app_name);
-                    }
-                    macos::MacAppStoreApp::TestFlight { app_name } => {
-                        testflight.insert(app_name);
-                    }
-                }
-            }
-            (app_store, testflight)
-        }
+
+    let apps = macos::get_apps()?;
+    let mas_apps = match macos::get_installed_mas_apps() {
+        Ok(installed_mas_apps) => installed_mas_apps,
         Err(macos::MacAppStoreListError::MasNotFound) => {
             eprintln!("`mas` is not installed, so installed Mac App Store apps cannot be checked");
-            (HashMap::new(), HashSet::new())
+            HashSet::new()
         }
         Err(error) => {
             return Err(error).context("Failed to get installed Mac App Store apps");
         }
+    };
+
+    Ok(State {
+        homebrew,
+        apps,
+        mas_apps,
+    })
+}
+
+pub fn generate_diff(config: MacOsConfig) -> Result<Vec<(&'static str, Vec<String>)>> {
+    let State {
+        homebrew,
+        apps: system_apps,
+        mas_apps,
+    } = get_state()?;
+    let system_has_homebrew = homebrew.is_some();
+    let (installed_taps, installed_formulae, installed_casks) = homebrew
+        .map(|homebrew| {
+            (
+                homebrew.taps,
+                homebrew.explicitly_installed_formulae,
+                homebrew.installed_casks,
+            )
+        })
+        .unwrap_or_default();
+    let (installed_app_store_apps, installed_testflight_apps): (
+        HashMap<u64, String>,
+        HashSet<String>,
+    ) = {
+        let mut app_store = HashMap::new();
+        let mut testflight = HashSet::new();
+        for app in mas_apps {
+            match app {
+                macos::MacAppStoreApp::AppStore { app_id, app_name } => {
+                    app_store.insert(app_id, app_name);
+                }
+                macos::MacAppStoreApp::TestFlight { app_name } => {
+                    testflight.insert(app_name);
+                }
+            }
+        }
+        (app_store, testflight)
     };
 
     let configured_taps: HashSet<&str> = config
