@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow};
 
 use crate::{
     fetchers::macos,
@@ -31,33 +31,52 @@ struct HomebrewState {
 }
 
 fn get_state() -> Result<State> {
-    let system_has_homebrew = macos::homebrew_is_installed();
-    let homebrew = if system_has_homebrew {
-        Some(HomebrewState {
-            taps: macos::get_taps()?,
-            explicitly_installed_formulae: macos::get_explicitly_installed_formulae()?,
-            installed_casks: macos::get_installed_casks()?,
+    std::thread::scope(|scope| {
+        let homebrew = scope.spawn(|| -> Result<Option<HomebrewState>> {
+            if !macos::homebrew_is_installed() {
+                return Ok(None);
+            }
+
+            let taps = scope.spawn(macos::get_taps);
+            let formulae = scope.spawn(macos::get_explicitly_installed_formulae);
+            let casks = scope.spawn(macos::get_installed_casks);
+
+            Ok(Some(HomebrewState {
+                taps: taps
+                    .join()
+                    .map_err(|_| anyhow!("Homebrew taps fetch thread panicked"))??,
+                explicitly_installed_formulae: formulae
+                    .join()
+                    .map_err(|_| anyhow!("Homebrew formulae fetch thread panicked"))??,
+                installed_casks: casks
+                    .join()
+                    .map_err(|_| anyhow!("Homebrew casks fetch thread panicked"))??,
+            }))
+        });
+
+        let apps = scope.spawn(macos::get_apps);
+        let mas_apps = scope.spawn(|| match macos::get_installed_mas_apps() {
+            Ok(installed_mas_apps) => Ok(installed_mas_apps),
+            Err(macos::MacAppStoreListError::MasNotFound) => {
+                eprintln!(
+                    "`mas` is not installed, so installed Mac App Store apps cannot be checked"
+                );
+                Ok(HashSet::new())
+            }
+            Err(error) => Err(error).context("Failed to get installed Mac App Store apps"),
+        });
+
+        Ok(State {
+            homebrew: homebrew
+                .join()
+                .map_err(|_| anyhow!("Homebrew fetch thread panicked"))??,
+            apps: apps
+                .join()
+                .map_err(|_| anyhow!("app fetch thread panicked"))??,
+            mas_apps: mas_apps
+                .join()
+                .map_err(|_| anyhow!("Mac App Store fetch thread panicked"))??,
         })
-    } else {
-        None
-    };
-
-    let apps = macos::get_apps()?;
-    let mas_apps = match macos::get_installed_mas_apps() {
-        Ok(installed_mas_apps) => installed_mas_apps,
-        Err(macos::MacAppStoreListError::MasNotFound) => {
-            eprintln!("`mas` is not installed, so installed Mac App Store apps cannot be checked");
-            HashSet::new()
-        }
-        Err(error) => {
-            return Err(error).context("Failed to get installed Mac App Store apps");
-        }
-    };
-
-    Ok(State {
-        homebrew,
-        apps,
-        mas_apps,
     })
 }
 
