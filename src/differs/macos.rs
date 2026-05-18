@@ -30,7 +30,7 @@ struct HomebrewState {
     installed_casks: HashSet<String>,
 }
 
-fn get_state() -> Result<State> {
+fn get_state(fast_brew: bool) -> Result<State> {
     std::thread::scope(|scope| {
         let homebrew = scope.spawn(|| -> Result<Option<HomebrewState>> {
             if !macos::homebrew_is_installed() {
@@ -38,8 +38,16 @@ fn get_state() -> Result<State> {
             }
 
             let taps = scope.spawn(macos::get_taps);
-            let formulae = scope.spawn(macos::get_explicitly_installed_formulae);
-            let casks = scope.spawn(macos::get_installed_casks);
+            let formulae = scope.spawn(if fast_brew {
+                macos::get_explicitly_installed_formulae_custom
+            } else {
+                macos::get_explicitly_installed_formulae_brew
+            });
+            let casks = scope.spawn(if fast_brew {
+                macos::get_installed_casks_custom
+            } else {
+                macos::get_installed_casks_brew
+            });
 
             Ok(Some(HomebrewState {
                 taps: taps
@@ -80,12 +88,15 @@ fn get_state() -> Result<State> {
     })
 }
 
-pub fn generate_diff(config: MacOsConfig) -> Result<Vec<(&'static str, Vec<String>)>> {
+pub fn generate_diff(
+    config: MacOsConfig,
+    fast_brew: bool,
+) -> Result<Vec<(&'static str, Vec<String>)>> {
     let State {
         homebrew,
         apps: system_apps,
         mas_apps,
-    } = get_state()?;
+    } = get_state(fast_brew)?;
     let system_has_homebrew = homebrew.is_some();
     let (installed_taps, installed_formulae, installed_casks) = homebrew
         .map(|homebrew| {

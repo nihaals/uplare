@@ -45,6 +45,12 @@ enum DiffCommands {
     MacOs {
         /// System configuration file to compare against
         system_config: PathBuf,
+
+        /// Use custom implementation of `brew list`
+        ///
+        /// This should produce the same output and be faster but may be incorrect in some edge cases
+        #[arg(long)]
+        fast_brew: bool,
     },
 
     /// SteamOS
@@ -116,9 +122,12 @@ fn main() -> Result<()> {
 
     match cli.command {
         Commands::Diff { command } => match command {
-            DiffCommands::MacOs { system_config } => {
+            DiffCommands::MacOs {
+                system_config,
+                fast_brew,
+            } => {
                 let config = read_macos_config(system_config)?;
-                let sections = differs::macos::generate_diff(config)?;
+                let sections = differs::macos::generate_diff(config, fast_brew)?;
                 print_sections(sections);
             }
             DiffCommands::SteamOs { system_config } => {
