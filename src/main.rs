@@ -61,7 +61,7 @@ enum FileSyncCommands {
     #[command(name = "macos")]
     MacOs {
         /// Output directory that will contain the mirrored symlinks
-        #[arg(short = 'o', long = "root")]
+        #[arg(short = 'o', long)]
         root: PathBuf,
 
         /// System configuration file to compare against
@@ -72,7 +72,7 @@ enum FileSyncCommands {
     #[command(name = "steamos")]
     SteamOs {
         /// Output directory that will contain the mirrored symlinks
-        #[arg(short = 'o', long = "root")]
+        #[arg(short = 'o', long)]
         root: PathBuf,
 
         /// System configuration file to compare against
