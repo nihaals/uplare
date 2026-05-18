@@ -3,9 +3,9 @@ mod fetchers;
 mod file_checks;
 mod pkl_types;
 
-use std::{fs, path::PathBuf};
+use std::{collections::HashSet, fs, path::PathBuf};
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow};
 use clap::{CommandFactory, Parser, Subcommand};
 use validator::Validate;
 
@@ -28,6 +28,12 @@ enum Commands {
     FileSync {
         #[command(subcommand)]
         command: FileSyncCommands,
+    },
+
+    /// Debug commands
+    Debug {
+        #[command(subcommand)]
+        command: DebugCommands,
     },
 
     /// Generate shell completions
@@ -86,6 +92,12 @@ enum FileSyncCommands {
     },
 }
 
+#[derive(Subcommand)]
+enum DebugCommands {
+    /// Compare macOS fast brew and `brew list`
+    FastBrewCheck {},
+}
+
 fn print_sections(sections: Vec<(&'static str, Vec<String>)>) {
     if sections.is_empty() {
         println!("No differences found");
@@ -98,6 +110,39 @@ fn print_sections(sections: Vec<(&'static str, Vec<String>)>) {
             println!("- {}", item);
         }
         println!();
+    }
+}
+
+fn print_fast_brew_comparison(label: &str, brew: &HashSet<String>, custom: &HashSet<String>) {
+    if brew == custom {
+        println!("{label}: brew and fast brew match");
+        return;
+    }
+
+    let mut brew_sorted = brew.iter().collect::<Vec<_>>();
+    brew_sorted.sort();
+    let mut custom_sorted = custom.iter().collect::<Vec<_>>();
+    custom_sorted.sort();
+    let mut missing_from_custom = brew.difference(custom).collect::<Vec<_>>();
+    missing_from_custom.sort();
+    let mut missing_from_brew = custom.difference(brew).collect::<Vec<_>>();
+    missing_from_brew.sort();
+
+    println!("{label}: brew and fast brew differ");
+    println!("brew: {brew_sorted:?}");
+    println!();
+    println!("fast brew: {custom_sorted:?}");
+    println!();
+
+    println!("missing from fast brew:");
+    for item in missing_from_custom {
+        println!("- {item}");
+    }
+    println!();
+
+    println!("missing from brew:");
+    for item in missing_from_brew {
+        println!("- {item}");
     }
 }
 
@@ -163,6 +208,38 @@ fn main() -> Result<()> {
                 eprintln!("Warning: {}", warning);
             }
         }
+        Commands::Debug { command } => match command {
+            DebugCommands::FastBrewCheck {} => {
+                let (formulae_brew, formulae_custom, casks_brew, casks_custom) =
+                    std::thread::scope(|scope| -> Result<_> {
+                        let formulae_brew =
+                            scope.spawn(fetchers::macos::get_explicitly_installed_formulae_brew);
+                        let formulae_custom =
+                            scope.spawn(fetchers::macos::get_explicitly_installed_formulae_custom);
+                        let casks_brew = scope.spawn(fetchers::macos::get_installed_casks_brew);
+                        let casks_custom = scope.spawn(fetchers::macos::get_installed_casks_custom);
+
+                        Ok((
+                            formulae_brew
+                                .join()
+                                .map_err(|_| anyhow!("formulae brew thread panicked"))??,
+                            formulae_custom
+                                .join()
+                                .map_err(|_| anyhow!("formulae custom thread panicked"))??,
+                            casks_brew
+                                .join()
+                                .map_err(|_| anyhow!("cask brew thread panicked"))??,
+                            casks_custom
+                                .join()
+                                .map_err(|_| anyhow!("cask custom thread panicked"))??,
+                        ))
+                    })?;
+
+                print_fast_brew_comparison("formulae", &formulae_brew, &formulae_custom);
+                println!();
+                print_fast_brew_comparison("casks", &casks_brew, &casks_custom);
+            }
+        },
         Commands::Completions { shell } => {
             shell.generate(&mut Cli::command(), &mut std::io::stdout());
         }
