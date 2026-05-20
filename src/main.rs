@@ -54,7 +54,7 @@ enum DiffCommands {
 
         /// Use custom implementation of `brew list`
         ///
-        /// This should produce the same output and be faster but may be incorrect in some edge cases. See `debug
+        /// This should be faster while producing the same output but may be incorrect in some edge cases. See `debug
         /// fast-brew-check`.
         #[arg(long)]
         fast_brew: bool,
