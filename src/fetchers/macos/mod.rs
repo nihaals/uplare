@@ -11,8 +11,10 @@ use anyhow::{Context, Result};
 use thiserror::Error;
 
 pub use brew::{
-    get_explicitly_installed_formulae_brew, get_explicitly_installed_formulae_custom,
-    get_installed_casks_brew, get_installed_casks_custom, get_taps, homebrew_is_installed,
+    get_dependency_formulae_brew, get_explicitly_installed_formulae_brew,
+    get_explicitly_installed_formulae_custom, get_installed_cask_tokens_brew,
+    get_installed_casks_brew, get_installed_casks_custom, get_installed_formulae_brew, get_taps,
+    homebrew_is_installed,
 };
 
 /// Get the list of installed applications as either `/Applications/App.app` or `~/Applications/App.app`. Searches one

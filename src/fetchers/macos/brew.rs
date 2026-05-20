@@ -14,18 +14,19 @@ pub fn homebrew_is_installed() -> bool {
         || Path::new("/usr/local/bin/brew").is_file()
 }
 
-pub fn get_taps() -> Result<HashSet<String>> {
+fn brew_list<const N: usize>(args: [&'static str; N]) -> Result<HashSet<String>> {
+    let command = || format!("brew {}", args.join(" "));
     let output = Command::new("brew")
-        .arg("tap")
+        .args(args)
         .output()
-        .context("Failed to run `brew tap`")?;
+        .with_context(|| format!("Failed to run `{}`", command()))?;
 
     if !output.status.success() {
-        bail!("`brew tap` failed with non-zero exit code");
+        bail!("`{}` failed with non-zero exit code", command());
     }
 
-    let stdout =
-        String::from_utf8(output.stdout).context("`brew tap` output was not valid UTF-8")?;
+    let stdout = String::from_utf8(output.stdout)
+        .with_context(|| format!("`{}` output was not valid UTF-8", command()))?;
     Ok(stdout
         .lines()
         .filter_map(|line| {
@@ -37,56 +38,30 @@ pub fn get_taps() -> Result<HashSet<String>> {
             }
         })
         .collect())
+}
+
+pub fn get_taps() -> Result<HashSet<String>> {
+    brew_list(["tap"])
 }
 
 pub fn get_explicitly_installed_formulae_brew() -> Result<HashSet<String>> {
-    let output = Command::new("brew")
-        .args(["list", "--installed-on-request", "--full-name"])
-        .output()
-        .context("Failed to run `brew list --installed-on-request --full-name`")?;
+    brew_list(["list", "--installed-on-request", "--full-name"])
+}
 
-    if !output.status.success() {
-        bail!("`brew list --installed-on-request --full-name` failed with non-zero exit code");
-    }
+pub fn get_installed_formulae_brew() -> Result<HashSet<String>> {
+    brew_list(["list", "--formula"])
+}
 
-    let stdout = String::from_utf8(output.stdout)
-        .context("`brew list --installed-on-request --full-name` output was not valid UTF-8")?;
-    Ok(stdout
-        .lines()
-        .filter_map(|line| {
-            let trimmed = line.trim();
-            if trimmed.is_empty() {
-                None
-            } else {
-                Some(trimmed.to_owned())
-            }
-        })
-        .collect())
+pub fn get_dependency_formulae_brew() -> Result<HashSet<String>> {
+    brew_list(["list", "--installed-as-dependency", "--full-name"])
 }
 
 pub fn get_installed_casks_brew() -> Result<HashSet<String>> {
-    let output = Command::new("brew")
-        .args(["list", "--cask", "--full-name"])
-        .output()
-        .context("Failed to run `brew list --cask --full-name`")?;
+    brew_list(["list", "--cask", "--full-name"])
+}
 
-    if !output.status.success() {
-        bail!("`brew list --cask --full-name` failed with non-zero exit code");
-    }
-
-    let stdout = String::from_utf8(output.stdout)
-        .context("`brew list --cask --full-name` output was not valid UTF-8")?;
-    Ok(stdout
-        .lines()
-        .filter_map(|line| {
-            let trimmed = line.trim();
-            if trimmed.is_empty() {
-                None
-            } else {
-                Some(trimmed.to_owned())
-            }
-        })
-        .collect())
+pub fn get_installed_cask_tokens_brew() -> Result<HashSet<String>> {
+    brew_list(["list", "--cask"])
 }
 
 fn homebrew_prefix() -> Result<PathBuf> {
