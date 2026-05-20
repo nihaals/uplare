@@ -122,37 +122,45 @@ fn print_sections(sections: Vec<(&'static str, Vec<String>)>) {
     }
 }
 
-fn print_fast_brew_comparison(label: &str, brew: &HashSet<String>, custom: &HashSet<String>) {
-    if brew == custom {
-        println!("{label}: brew and fast brew match");
+fn push_fast_brew_comparison(
+    output: &mut String,
+    label: &str,
+    brew: &HashSet<String>,
+    fast_brew: &HashSet<String>,
+) {
+    if brew == fast_brew {
+        output.push_str(&format!("{label}: brew and fast brew match\n"));
         return;
     }
 
-    let mut brew_sorted = brew.iter().collect::<Vec<_>>();
-    brew_sorted.sort();
-    let mut custom_sorted = custom.iter().collect::<Vec<_>>();
-    custom_sorted.sort();
-    let mut missing_from_custom = brew.difference(custom).collect::<Vec<_>>();
-    missing_from_custom.sort();
-    let mut missing_from_brew = custom.difference(brew).collect::<Vec<_>>();
+    let mut missing_from_fast_brew = brew.difference(fast_brew).collect::<Vec<_>>();
+    missing_from_fast_brew.sort();
+    let mut missing_from_brew = fast_brew.difference(brew).collect::<Vec<_>>();
     missing_from_brew.sort();
 
-    println!("{label}: brew and fast brew differ");
-    println!("brew: {brew_sorted:?}");
-    println!();
-    println!("fast brew: {custom_sorted:?}");
-    println!();
+    output.push_str(&format!("{label}: brew and fast brew differ\n"));
+    push_list(output, "brew", sorted_items(brew), true);
+    push_list(output, "fast brew", sorted_items(fast_brew), true);
+    push_list(
+        output,
+        "missing from fast brew",
+        missing_from_fast_brew,
+        false,
+    );
+    push_list(output, "missing from brew", missing_from_brew, false);
+}
 
-    println!("missing from fast brew:");
-    for item in missing_from_custom {
-        println!("- {item}");
-    }
-    println!();
-
-    println!("missing from brew:");
-    for item in missing_from_brew {
-        println!("- {item}");
-    }
+fn fast_brew_comparison_output(
+    formulae_brew: &HashSet<String>,
+    formulae_fast_brew: &HashSet<String>,
+    casks_brew: &HashSet<String>,
+    casks_fast_brew: &HashSet<String>,
+) -> String {
+    let mut output = String::new();
+    push_fast_brew_comparison(&mut output, "formulae", formulae_brew, formulae_fast_brew);
+    output.push('\n');
+    push_fast_brew_comparison(&mut output, "casks", casks_brew, casks_fast_brew);
+    output
 }
 
 fn sorted_items(items: &HashSet<String>) -> Vec<&String> {
@@ -389,9 +397,15 @@ fn main() -> Result<()> {
                         ))
                     })?;
 
-                print_fast_brew_comparison("formulae", &formulae_brew, &formulae_custom);
-                println!();
-                print_fast_brew_comparison("casks", &casks_brew, &casks_custom);
+                print!(
+                    "{}",
+                    fast_brew_comparison_output(
+                        &formulae_brew,
+                        &formulae_custom,
+                        &casks_brew,
+                        &casks_custom,
+                    ),
+                );
             }
             DebugCommands::BrokenBrewInstallMetadataCheck {} => {
                 let (formulae, dependency_formulae, requested_formulae, cask_tokens, casks) =
