@@ -94,7 +94,10 @@ enum FileSyncCommands {
 
 #[derive(Subcommand)]
 enum DebugCommands {
-    /// Compare macOS fast brew and `brew list`
+    /// Compare macOS' `--fast-brew` and `brew list`
+    ///
+    /// This runs both the custom implementation and the `brew list` commands used if `--fast-brew` is not
+    /// used. If they match, `--fast-brew` will produce the same diff as without the flag.
     FastBrewCheck {},
 
     /// Check for packages missing from `brew list --full-name`
