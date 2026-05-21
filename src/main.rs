@@ -108,7 +108,7 @@ enum DebugCommands {
     /// similar issue with formulae. If any packages are missing, this may lead to differences with `--fast-brew` (see
     /// `debug fast-brew-check`) and installed packages not being detected. Reinstalling the affected packages may
     /// resolve the issue.
-    BrokenBrewInstallMetadataCheck {},
+    IncorrectBrewListCheck {},
 }
 
 fn print_sections(sections: Vec<(&'static str, Vec<String>)>) {
@@ -209,7 +209,7 @@ fn strip_tap_prefixes(items: &HashSet<String>) -> Result<HashSet<String>> {
     Ok(stripped)
 }
 
-fn broken_brew_install_metadata_check_output(
+fn incorrect_brew_list_check_output(
     formulae: &HashSet<String>,
     dependency_formulae: &HashSet<String>,
     requested_formulae: &HashSet<String>,
@@ -411,7 +411,7 @@ fn main() -> Result<()> {
                     ),
                 );
             }
-            DebugCommands::BrokenBrewInstallMetadataCheck {} => {
+            DebugCommands::IncorrectBrewListCheck {} => {
                 let (formulae, dependency_formulae, requested_formulae, cask_tokens, casks) =
                     std::thread::scope(|scope| -> Result<_> {
                         let formulae = scope.spawn(fetchers::macos::get_installed_formulae_brew);
@@ -444,7 +444,7 @@ fn main() -> Result<()> {
 
                 print!(
                     "{}",
-                    broken_brew_install_metadata_check_output(
+                    incorrect_brew_list_check_output(
                         &formulae,
                         &dependency_formulae,
                         &requested_formulae,
@@ -470,9 +470,9 @@ mod tests {
     }
 
     #[test]
-    fn broken_brew_install_metadata_check_output_when_metadata_is_valid() {
+    fn incorrect_brew_list_check_output_when_metadata_is_valid() {
         assert_eq!(
-            broken_brew_install_metadata_check_output(
+            incorrect_brew_list_check_output(
                 &set(&["dependency", "requested", "tapped-requested"]),
                 &set(&["homebrew/core/dependency"]),
                 &set(&["requested", "user/repo/tapped-requested"]),
@@ -488,9 +488,9 @@ mod tests {
     }
 
     #[test]
-    fn broken_brew_install_metadata_check_output_for_formulae_mismatch() {
+    fn incorrect_brew_list_check_output_for_formulae_mismatch() {
         assert_eq!(
-            broken_brew_install_metadata_check_output(
+            incorrect_brew_list_check_output(
                 &set(&["dependency", "missing-requested", "requested"]),
                 &set(&["homebrew/core/dependency"]),
                 &set(&["requested", "user/repo/unexpected-requested"]),
@@ -519,9 +519,9 @@ mod tests {
     }
 
     #[test]
-    fn broken_brew_install_metadata_check_output_for_cask_mismatch() {
+    fn incorrect_brew_list_check_output_for_cask_mismatch() {
         assert_eq!(
-            broken_brew_install_metadata_check_output(
+            incorrect_brew_list_check_output(
                 &set(&["requested"]),
                 &set(&[]),
                 &set(&["requested"]),
@@ -542,9 +542,9 @@ mod tests {
     }
 
     #[test]
-    fn broken_brew_install_metadata_check_output_for_formulae_and_cask_mismatch() {
+    fn incorrect_brew_list_check_output_for_formulae_and_cask_mismatch() {
         assert_eq!(
-            broken_brew_install_metadata_check_output(
+            incorrect_brew_list_check_output(
                 &set(&["dependency", "missing-requested", "requested"]),
                 &set(&["homebrew/core/dependency"]),
                 &set(&["requested", "user/repo/unexpected-requested"]),
@@ -578,9 +578,9 @@ mod tests {
     }
 
     #[test]
-    fn broken_brew_install_metadata_check_output_errors_on_duplicate_stripped_formulae() {
+    fn incorrect_brew_list_check_output_errors_on_duplicate_stripped_formulae() {
         assert_eq!(
-            broken_brew_install_metadata_check_output(
+            incorrect_brew_list_check_output(
                 &set(&["requested"]),
                 &set(&[]),
                 &set(&["requested", "user/repo/requested"]),
@@ -594,9 +594,9 @@ mod tests {
     }
 
     #[test]
-    fn broken_brew_install_metadata_check_output_errors_on_duplicate_stripped_casks() {
+    fn incorrect_brew_list_check_output_errors_on_duplicate_stripped_casks() {
         assert_eq!(
-            broken_brew_install_metadata_check_output(
+            incorrect_brew_list_check_output(
                 &set(&["requested"]),
                 &set(&[]),
                 &set(&["requested"]),
