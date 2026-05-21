@@ -77,7 +77,7 @@ enum FileSyncCommands {
         #[arg(short = 'o', long)]
         root: PathBuf,
 
-        /// System configuration file to compare against
+        /// System configuration file with file sync paths
         system_config: PathBuf,
     },
 
@@ -88,7 +88,7 @@ enum FileSyncCommands {
         #[arg(short = 'o', long)]
         root: PathBuf,
 
-        /// System configuration file to compare against
+        /// System configuration file with file sync paths
         system_config: PathBuf,
     },
 }
