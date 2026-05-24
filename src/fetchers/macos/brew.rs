@@ -180,12 +180,12 @@ struct CaskInstallSource {
 fn cask_installed_tap(cask_path: &Path) -> Result<Option<String>> {
     // For old cask installs, this file doesn't exist
     // Even if an old cask is updated, this file will still not be created
-    // However, parsing this seems to be the simplest option and our implementation should not be expected to be
-    // perfect, we are optimising for speed and simplicity while catching enough of the common cases to be accurate for
-    // most systems
-    // It also contains the metadata at install time which could differ from the metadata for the current version
-    // `brew list --cask --full-name` also handles multiple taps providing the same cask name in incorrect ways
-    // so this is probably fine
+    // However, parsing this seems to be the simplest option and our implementation should not be
+    // expected to be perfect, we are optimising for speed and simplicity while catching enough
+    // of the common cases to be accurate for most systems
+    // It also contains the metadata at install time which could differ from the metadata for the
+    // current version `brew list --cask --full-name` also handles multiple taps providing the
+    // same cask name in incorrect ways so this is probably fine
     let receipt_path = cask_path.join(".metadata/INSTALL_RECEIPT.json");
     if !receipt_path.is_file() {
         return Ok(None);

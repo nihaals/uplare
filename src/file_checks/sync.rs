@@ -89,8 +89,8 @@ fn build_sync_entries(file_checks: &[FileCheck], root: &Path) -> Result<Vec<Sync
     Ok(entries)
 }
 
-/// Gets all the symlinks in `dir` (recursively) and adds them to `symlinks`. Also adds warnings for non-symlinks in
-/// `dir`.
+/// Gets all the symlinks in `dir` (recursively) and adds them to `symlinks`. Also adds warnings for
+/// non-symlinks in `dir`.
 fn get_symlinks(dir: &Path, symlinks: &mut Vec<PathBuf>, warnings: &mut Vec<String>) -> Result<()> {
     let read_dir = match fs::read_dir(dir) {
         Ok(read_dir) => read_dir,
@@ -218,10 +218,9 @@ pub fn sync_sync_file_checks(file_checks: &[FileCheck], root: &Path) -> Result<F
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::{env, fs};
 
+    use super::*;
     use crate::pkl_types::file_check::{DirectorySync, FileSync};
 
     fn sync_entry(path: &str) -> SyncEntry {

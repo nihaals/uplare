@@ -10,15 +10,16 @@ use std::{
 use anyhow::{Context, Result};
 use thiserror::Error;
 
-pub use brew::{
+pub use self::brew::{
     get_dependency_formulae_brew, get_explicitly_installed_formulae_brew,
     get_explicitly_installed_formulae_custom, get_installed_cask_tokens_brew,
     get_installed_casks_brew, get_installed_casks_custom, get_installed_formulae_brew, get_taps,
     homebrew_is_installed,
 };
 
-/// Get the list of installed applications as either `/Applications/App.app` or `~/Applications/App.app`. Searches one
-/// subdirectory deep in `/Applications` and `~/Applications`, excluding inside apps. Excludes pre-installed apps.
+/// Get the list of installed applications as either `/Applications/App.app` or
+/// `~/Applications/App.app`. Searches one subdirectory deep in `/Applications` and
+/// `~/Applications`, excluding inside apps. Excludes pre-installed apps.
 pub fn get_apps() -> Result<HashSet<String>> {
     let home_dir: PathBuf = env::var("HOME")
         .context("HOME environment variable not set")?

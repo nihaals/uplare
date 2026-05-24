@@ -214,8 +214,8 @@ fn parse_installed_flatpak_apps_output(stdout: &str) -> Result<HashSet<String>> 
 
 /// Checks if `~/homebrew/services/PluginLoader` exists.
 ///
-/// This is handled separately to the settings file not existing in case Decky has been uninstalled (at least the
-/// binary) but user data such as settings have not been deleted.
+/// This is handled separately to the settings file not existing in case Decky has been uninstalled
+/// (at least the binary) but user data such as settings have not been deleted.
 pub fn is_decky_installed() -> Result<bool> {
     let home_dir: PathBuf = env::var("HOME")
         .context("HOME environment variable not set")?

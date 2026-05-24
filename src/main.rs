@@ -54,8 +54,8 @@ enum DiffCommands {
 
         /// Use custom implementation of `brew list`
         ///
-        /// This should be faster while producing the same output but may be incorrect in some edge cases. See `debug
-        /// fast-brew-check`.
+        /// This should be faster while producing the same output but may be incorrect in some edge
+        /// cases. See `debug fast-brew-check`.
         #[arg(long)]
         fast_brew: bool,
     },
@@ -97,17 +97,19 @@ enum FileSyncCommands {
 enum DebugCommands {
     /// Compare macOS' `--fast-brew` and `brew list`
     ///
-    /// This runs both the custom implementation and the `brew list` commands used if `--fast-brew` is not
-    /// used. If they match, `--fast-brew` will produce the same diff as without the flag.
+    /// This runs both the custom implementation and the `brew list` commands used if `--fast-brew`
+    /// is not used. If they match, `--fast-brew` will produce the same diff as without the
+    /// flag.
     FastBrewCheck {},
 
     /// Check for packages missing from `brew list --full-name`
     ///
-    /// In some cases, installed casks may show in `brew list --cask` but be unexpectedly missing from `brew list --cask
-    /// --full-name`. This has so far only been reported for casks but this command also attempts to check for a
-    /// similar issue with formulae. If any packages are missing, this may lead to differences with `--fast-brew` (see
-    /// `debug fast-brew-check`) and installed packages not being detected. Reinstalling the affected packages may
-    /// resolve the issue.
+    /// In some cases, installed casks may show in `brew list --cask` but be unexpectedly missing
+    /// from `brew list --cask --full-name`. This has so far only been reported for casks but
+    /// this command also attempts to check for a similar issue with formulae. If any packages
+    /// are missing, this may lead to differences with `--fast-brew` (see
+    /// `debug fast-brew-check`) and installed packages not being detected. Reinstalling the
+    /// affected packages may resolve the issue.
     IncorrectBrewListCheck {},
 }
 

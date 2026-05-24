@@ -381,11 +381,11 @@ pub fn diff_file_checks(file_checks: &[FileCheck]) -> Result<Vec<String>> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::io;
 
     use serde_json::json;
+
+    use super::*;
 
     #[test]
     fn test_find_mismatched_keys_mismatch() {

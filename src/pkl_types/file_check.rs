@@ -1,6 +1,7 @@
+use std::{borrow::Cow, collections::HashSet};
+
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::{borrow::Cow, collections::HashSet};
 use validator::{Validate, ValidationError, ValidationErrors};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -238,8 +239,9 @@ fn is_valid_directory_path(path: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use serde_json::json;
+
+    use super::*;
 
     fn no_constraint_violation(value: &impl Validate) -> bool {
         value.validate().is_ok()

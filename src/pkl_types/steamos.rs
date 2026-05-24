@@ -1,5 +1,6 @@
-use serde::{Deserialize, Serialize};
 use std::{borrow::Cow, collections::HashSet};
+
+use serde::{Deserialize, Serialize};
 use validator::{Validate, ValidationError};
 
 use crate::pkl_types::file_check::{FileCheck, validate_distinct_file_check_paths};
@@ -18,13 +19,15 @@ pub struct SteamOsConfig {
     /// `None` for uninstalled.
     #[validate(nested)]
     pub decky: Option<Decky>,
-    /// This is not a complete list but a list of units that are enabled. Units not listed are not assumed to be disabled.
+    /// This is not a complete list but a list of units that are enabled. Units not listed are not
+    /// assumed to be disabled.
     #[validate(custom(function = "validate_distinct_strings_with_dot"))]
     pub enabled_systemd_units: Vec<String>,
     /// An exhaustive list of file names in `~/Desktop/` or `None` to not check.
     #[validate(custom(function = "validate_non_empty_distinct_strings"))]
     pub desktop: Option<Vec<String>>,
-    /// An exhaustive ordered list of applications or `None` to not check. Must match KDE Plasma's `launchers` format.
+    /// An exhaustive ordered list of applications or `None` to not check. Must match KDE Plasma's
+    /// `launchers` format.
     #[validate(custom(function = "validate_non_empty_distinct_strings"))]
     pub kde_plasma_dock: Option<Vec<String>>,
     #[validate(nested, custom(function = "validate_distinct_file_check_paths"))]
