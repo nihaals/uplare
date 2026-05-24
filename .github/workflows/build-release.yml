@@ -76,11 +76,19 @@ jobs:
     runs-on: ${{ matrix.runs-on }}
     name: Test Rust CLI - ${{ matrix.runs-on }}
     steps:
+      - name: Install rustfmt nightly
+        if: matrix.all-tests
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+          components: rustfmt
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
-          components: rustfmt, clippy
+          components: clippy
+      - name: Confirm rustup toolchains
+        run: rustup toolchain list
       - uses: actions/checkout@v6
       - uses: Swatinem/rust-cache@v2
       - name: Run tests
@@ -91,7 +99,7 @@ jobs:
         if: matrix.all-tests
         id: cargo-fmt
         continue-on-error: true
-        run: cargo fmt -- --check
+        run: cargo +nightly fmt -- --check
       - name: Check clippy
         if: matrix.all-tests
         id: cargo-clippy
