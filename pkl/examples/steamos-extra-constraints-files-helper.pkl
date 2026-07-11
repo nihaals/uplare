@@ -24,7 +24,7 @@ steamOs {
   }
   decky = new Decky {
     settings {}
-    local plugins: Listing<DeckyPlugin(directoryName != null)>(
+    local pluginsCustom: Listing<DeckyPlugin(directoryName != null)>(
       toList().sortBy((plugin) -> plugin.name) == toList(),
     ) = new {
       new {
@@ -37,9 +37,9 @@ steamOs {
         disabled = true
       }
     }
-    plugins = plugins
+    plugins = pluginsCustom
   }
-  local files: Listing = new {
+  local filesCustom: Listing = new {
     local function getPluginDirectory(pluginName: String): String =
       decky.plugins.toList().find((plugin) -> plugin.name == pluginName).directoryName!!
     local function dataDirectory(pluginName: String): String =
@@ -58,7 +58,7 @@ steamOs {
     }
   }
   files =
-    files
+    filesCustom
       .toList()
       .map((fileCheck) -> if (fileCheck is FileCheck.FileCheck) fileCheck else fileCheck.fileCheck)
       .toListing()
