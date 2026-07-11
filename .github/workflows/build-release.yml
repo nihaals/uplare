@@ -18,7 +18,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          version=$(curl -s "https://api.github.com/repos/apple/pkl/releases" | jq -r '.[].tag_name' | grep -E '^0\.31\.[0-9]+$' | sort -V | tail -n 1)
+          version=$(curl -s "https://api.github.com/repos/apple/pkl/releases" | jq -r '.[].tag_name' | grep -E '^0\.32\.[0-9]+$' | sort -V | tail -n 1)
           echo "Found Pkl version: $version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
       - name: Install Pkl
