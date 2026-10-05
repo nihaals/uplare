@@ -47,6 +47,7 @@ class DeckySettings {
   deckyUpdateNotification: Boolean = true
   pluginUpdateNotification: Boolean = true
   developerMode: Boolean = false
+  sortPlugins: Boolean = false
 }
 
 class DeckyPlugin {

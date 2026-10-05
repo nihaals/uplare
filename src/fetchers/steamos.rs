@@ -231,6 +231,7 @@ pub struct DeckySettings {
     pub decky_update_notifications: bool,
     pub plugins_update_notifications: bool,
     pub developer_mode: bool,
+    pub sort_plugins: bool,
     pub disabled_plugins: HashSet<String>,
 }
 
@@ -264,6 +265,8 @@ struct RawDeckySettings {
     notification_settings: RawDeckyNotificationSettings,
     #[serde(rename = "developer.enabled")]
     developer_enabled: bool,
+    #[serde(rename = "sortPlugins")]
+    sort_plugins: bool,
     disabled_plugins: Vec<String>,
 }
 
@@ -296,6 +299,7 @@ fn parse_decky_settings(settings: &str) -> Result<DeckySettings> {
         decky_update_notifications: settings.notification_settings.decky_updates,
         plugins_update_notifications: settings.notification_settings.plugin_updates,
         developer_mode: settings.developer_enabled,
+        sort_plugins: settings.sort_plugins,
         disabled_plugins: settings.disabled_plugins.into_iter().collect(),
     })
 }
@@ -867,6 +871,7 @@ mod tests {
                     "branch": 0,
                     "store": 1,
                     "developer.enabled": true,
+                    "sortPlugins": true,
                     "notificationSettings": {
                         "deckyUpdates": false,
                         "pluginUpdates": true
@@ -881,6 +886,7 @@ mod tests {
                 decky_update_notifications: false,
                 plugins_update_notifications: true,
                 developer_mode: true,
+                sort_plugins: true,
                 disabled_plugins: HashSet::from(["a".to_owned(), "b".to_owned()]),
             },
         );
@@ -894,6 +900,7 @@ mod tests {
                     "branch": 2,
                     "store": 0,
                     "developer.enabled": true,
+                    "sortPlugins": false,
                     "notificationSettings": {
                         "deckyUpdates": false,
                         "pluginUpdates": true
@@ -913,6 +920,7 @@ mod tests {
                     "branch": 0,
                     "store": 2,
                     "developer.enabled": true,
+                    "sortPlugins": false,
                     "notificationSettings": {
                         "deckyUpdates": false,
                         "pluginUpdates": true

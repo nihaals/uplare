@@ -250,6 +250,12 @@ pub fn generate_diff(config: SteamOsConfig) -> Result<Vec<(&'static str, Vec<Str
                     decky.settings.developer_mode, system_decky_settings.developer_mode,
                 ));
             }
+            if decky.settings.sort_plugins != system_decky_settings.sort_plugins {
+                decky_settings_mismatches.push(format!(
+                    "config sortPlugins = {}, system sortPlugins = {}",
+                    decky.settings.sort_plugins, system_decky_settings.sort_plugins,
+                ));
+            }
 
             if !decky_settings_mismatches.is_empty() {
                 sections.push(("Decky settings mismatch", decky_settings_mismatches));

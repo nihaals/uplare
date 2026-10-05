@@ -103,7 +103,8 @@ examples {
           "storeChannel": "default",
           "deckyUpdateNotification": true,
           "pluginUpdateNotification": true,
-          "developerMode": false
+          "developerMode": false,
+          "sortPlugins": false
         },
         "plugins": [
           {
@@ -158,7 +159,8 @@ examples {
           "storeChannel": "default",
           "deckyUpdateNotification": true,
           "pluginUpdateNotification": true,
-          "developerMode": true
+          "developerMode": true,
+          "sortPlugins": true
         },
         "plugins": [
           {

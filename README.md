@@ -123,6 +123,7 @@ steamOs {
       deckyUpdateNotification = true
       pluginUpdateNotification = true
       developerMode = true
+      sortPlugins = true
     }
     plugins {
       new { name = "Brightness Bar" }

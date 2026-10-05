@@ -71,6 +71,7 @@ pub struct DeckySettings {
     pub decky_update_notification: bool,
     pub plugin_update_notification: bool,
     pub developer_mode: bool,
+    pub sort_plugins: bool,
 }
 
 #[derive(Deserialize, Serialize, Validate)]
@@ -203,6 +204,7 @@ mod tests {
             decky_update_notification: true,
             plugin_update_notification: true,
             developer_mode: false,
+            sort_plugins: false,
         }
     }
 
