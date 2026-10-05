@@ -19,7 +19,7 @@ serde_json = { version = "1", features = ["preserve_order"] }
 serde_yaml = "0.9"
 steam-vdf-parser = "0.1"
 thiserror = "2"
-validator = { version = "0.20", features = ["derive"] }
+validator = { version = "0.21", features = ["derive"] }
 which = "8"
 
 [dev-dependencies]
