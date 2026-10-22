@@ -244,7 +244,7 @@ fn incorrect_brew_list_check_output(
         );
         push_list(
             &mut output,
-            "brew list --installed-as-dependency --full-name",
+            "brew list --no-installed-on-request --full-name",
             sorted_items(&dependency_formulae),
             true,
         );
@@ -505,7 +505,7 @@ mod tests {
                 "\n",
                 "brew list --formula:\n",
                 "[\"dependency\", \"missing-requested\", \"requested\"]\n",
-                "\nbrew list --installed-as-dependency --full-name:\n",
+                "\nbrew list --no-installed-on-request --full-name:\n",
                 "[\"dependency\"]\n",
                 "\nExpected installed-on-request formulae:\n",
                 "[\"missing-requested\", \"requested\"]\n",
@@ -559,7 +559,7 @@ mod tests {
                 "\n",
                 "brew list --formula:\n",
                 "[\"dependency\", \"missing-requested\", \"requested\"]\n",
-                "\nbrew list --installed-as-dependency --full-name:\n",
+                "\nbrew list --no-installed-on-request --full-name:\n",
                 "[\"dependency\"]\n",
                 "\nExpected installed-on-request formulae:\n",
                 "[\"missing-requested\", \"requested\"]\n",

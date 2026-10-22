@@ -53,7 +53,7 @@ pub fn get_installed_formulae_brew() -> Result<HashSet<String>> {
 }
 
 pub fn get_dependency_formulae_brew() -> Result<HashSet<String>> {
-    brew_list(["list", "--installed-as-dependency", "--full-name"])
+    brew_list(["list", "--no-installed-on-request", "--full-name"])
 }
 
 pub fn get_installed_casks_brew() -> Result<HashSet<String>> {
