@@ -40,11 +40,14 @@ typealias MacAppPath =
   String((startsWith("/Applications/") || startsWith("~/Applications/")) && endsWith(".app"))
 
 /// If [bool] is `false` then [listing] must not contain any item with class [`class`].
-local const function ifFalseExcludesClass(bool: Boolean, `class`: Class, listing: Listing<Any>) =
-  if (bool) true else listing.every((item) -> item.getClass() != `class`)
+local const function ifFalseExcludesClass(
+  bool: Boolean,
+  `class`: Class,
+  listing: Listing<Any>,
+): Boolean = if (bool) true else listing.every((item) -> item.getClass() != `class`)
 
 /// If [bool] is `true` then [listing] must be length 1.
-local const function isLengthOne(bool: Boolean, listing: Listing<Any>) =
+local const function isLengthOne(bool: Boolean, listing: Listing<Any>): Boolean =
   if (bool) listing.length == 1 else true
 
 abstract local class BaseMacApp {
