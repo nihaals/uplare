@@ -3,10 +3,9 @@ amends "pkl:test"
 import "../FileCheck.pkl"
 import "../SteamOs.pkl"
 
-local function noConstraintViolation(value: Any): Boolean =
-  module.catchOrNull(() -> value.toString()) == null
+local function noConstraintViolation(value: Any): Boolean = module.catchOrNull(() -> value) == null
 local function constraintViolation(value: Any): Boolean =
-  module.catchOrNull(() -> value.toString())?.startsWith("Type constraint ") ?? false
+  module.catchOrNull(() -> value)?.startsWith("Type constraint ") ?? false
 
 facts {
   // -- chargeLimit --

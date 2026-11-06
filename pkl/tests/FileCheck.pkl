@@ -2,12 +2,11 @@ amends "pkl:test"
 
 import "../FileCheck.pkl"
 
-local function noConstraintViolation(value: Any): Boolean =
-  module.catchOrNull(() -> value.toString()) == null
+local function noConstraintViolation(value: Any): Boolean = module.catchOrNull(() -> value) == null
 local function constraintViolation(value: Any): Boolean =
-  module.catchOrNull(() -> value.toString())?.startsWith("Type constraint ") ?? false
+  module.catchOrNull(() -> value)?.startsWith("Type constraint ") ?? false
 local function typeMismatch(value: Function0<Any>): Boolean =
-  module.catchOrNull(() -> value.apply().toString())?.startsWith("Expected value of type ") ?? false
+  module.catchOrNull(() -> value.apply())?.startsWith("Expected value of type ") ?? false
 
 facts {
   // -- file paths --
